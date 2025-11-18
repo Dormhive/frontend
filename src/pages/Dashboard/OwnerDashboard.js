@@ -1,21 +1,28 @@
+// ...existing code...
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 
 const API_URL = 'http://localhost:3001/api';
 
 function OwnerDashboard() {
+  const navigate = useNavigate();
+
   const [showAddPropertyForm, setShowAddPropertyForm] = useState(false);
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // rooms store: { [propertyId]: [ {id, roomNumber, type, monthlyRent, capacity, amenities, tenants} ] }
+  // rooms store: { [propertyId]: [ {id, roomNumber, type, monthlyRent, capacity, amenities, tenants, paymentSchedule} ] }
   const [rooms, setRooms] = useState({});
   // UI maps
   const [expanded, setExpanded] = useState({}); // { [propertyId]: true/false }
   const [showAddRoomForm, setShowAddRoomForm] = useState({}); // { [propertyId]: true/false }
   const [showAssignTenantForm, setShowAssignTenantForm] = useState({}); // { [roomId]: true/false }
+
+  // per-room tenant input state to avoid shared/global input collisions
+  const [tenantFormByRoom, setTenantFormByRoom] = useState({}); // { [roomId]: { email: '' } }
 
   // All tenants aggregated across all properties and rooms
   const [allTenants, setAllTenants] = useState([]);
@@ -29,16 +36,14 @@ function OwnerDashboard() {
     description: '',
   });
 
+  // ADDED: default paymentSchedule for room when creating
   const [roomForm, setRoomForm] = useState({
     roomNumber: '',
     type: '',
     monthlyRent: '',
     capacity: '',
     amenities: '',
-  });
-
-  const [tenantForm, setTenantForm] = useState({
-    email: '',
+    paymentSchedule: '1st',
   });
 
   const ROOM_TYPES = [
@@ -68,6 +73,7 @@ function OwnerDashboard() {
             propertyId: parseInt(propertyId),
             propertyName: property.propertyName,
             propertyAddress: property.address,
+            paymentSchedule: tenant.paymentSchedule || room.paymentSchedule || '1st',
           });
         });
       });
@@ -160,9 +166,10 @@ function OwnerDashboard() {
     setRoomForm((s) => ({ ...s, [name]: value }));
   };
 
-  const handleTenantInput = (e) => {
-    const { name, value } = e.target;
-    setTenantForm((s) => ({ ...s, [name]: value }));
+  // NEW: tenant input handler that targets a specific roomId
+  const handleTenantInputForRoom = (roomId, e) => {
+    const { value } = e.target;
+    setTenantFormByRoom((prev) => ({ ...prev, [roomId]: { email: value } }));
   };
 
   const handleAddProperty = async (e) => {
@@ -202,14 +209,15 @@ function OwnerDashboard() {
   // Toggle add-room form visibility for a specific property
   const toggleAddRoomFormFor = (propertyId) => {
     setShowAddRoomForm((s) => ({ ...s, [propertyId]: !s[propertyId] }));
-    setRoomForm({ roomNumber: '', type: '', monthlyRent: '', capacity: '', amenities: '' });
+    // RESET room form including schedule
+    setRoomForm({ roomNumber: '', type: '', monthlyRent: '', capacity: '', amenities: '', paymentSchedule: '1st' });
   };
 
   // Add room to backend and local state
   const handleAddRoomFor = async (e, propertyId) => {
     e.preventDefault();
     setError('');
-    const { roomNumber, type, monthlyRent, capacity, amenities } = roomForm;
+    const { roomNumber, type, monthlyRent, capacity, amenities, paymentSchedule } = roomForm;
     if (!roomNumber || !type || monthlyRent === '' || monthlyRent === null) {
       setError('Please fill required room fields (number, type, monthly rent).');
       return;
@@ -219,7 +227,7 @@ function OwnerDashboard() {
       const token = localStorage.getItem('token');
       const res = await axios.post(
         `${API_URL}/properties/${propertyId}/rooms`,
-        { roomNumber, type, monthlyRent, capacity, amenities },
+        { roomNumber, type, monthlyRent, capacity, amenities, paymentSchedule },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -230,25 +238,26 @@ function OwnerDashboard() {
       });
 
       setShowAddRoomForm((s) => ({ ...s, [propertyId]: false }));
-      setRoomForm({ roomNumber: '', type: '', monthlyRent: '', capacity: '', amenities: '' });
+      setRoomForm({ roomNumber: '', type: '', monthlyRent: '', capacity: '', amenities: '', paymentSchedule: '1st' });
     } catch (err) {
       console.error('Error saving room:', err);
       setError(err.response?.data?.message || 'Error adding room');
     }
   };
 
-  // Toggle assign tenant form
+  // Toggle assign tenant form for specific room and initialize per-room input
   const toggleAssignTenantFormFor = (roomId) => {
     setShowAssignTenantForm((s) => ({ ...s, [roomId]: !s[roomId] }));
-    setTenantForm({ email: '' });
+    setTenantFormByRoom((prev) => ({ ...prev, [roomId]: { email: '' } }));
   };
 
-  // Assign tenant to room
+  // Assign tenant to room (tenant inherits room.schedule). Uses per-room input to ensure captured value.
   const handleAssignTenant = async (e, roomId, propertyId) => {
     e.preventDefault();
     setError('');
 
-    if (!tenantForm.email.trim()) {
+    const tenantInput = (tenantFormByRoom[roomId] && tenantFormByRoom[roomId].email || '').trim();
+    if (!tenantInput) {
       setError('Please enter tenant email address.');
       return;
     }
@@ -257,22 +266,31 @@ function OwnerDashboard() {
       const token = localStorage.getItem('token');
       const res = await axios.post(
         `${API_URL}/properties/${propertyId}/rooms/${roomId}/assign-tenant`,
-        { tenantEmail: tenantForm.email },
+        { tenantEmail: tenantInput }, // no schedule in body
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const updatedRoom = res.data;
+      const updatedRoomRaw = res.data;
 
-      // Update local rooms state with updated tenants list
+      // Normalize tenants so each tenant has a paymentSchedule inherited from room when missing.
+      const normalizedRoom = {
+        ...updatedRoomRaw,
+        tenants: (updatedRoomRaw.tenants || []).map((t) => ({
+          ...t,
+          paymentSchedule: t.paymentSchedule || updatedRoomRaw.paymentSchedule || '1st',
+        })),
+      };
+
       setRooms((r) => {
-        const updatedRooms = r[propertyId].map((room) =>
-          room.id === roomId ? updatedRoom : room
+        const updatedRooms = (r[propertyId] || []).map((room) =>
+          room.id === roomId ? normalizedRoom : room
         );
         return { ...r, [propertyId]: updatedRooms };
       });
 
+      // clear per-room input and hide form
+      setTenantFormByRoom((prev) => ({ ...prev, [roomId]: { email: '' } }));
       setShowAssignTenantForm((s) => ({ ...s, [roomId]: false }));
-      setTenantForm({ email: '' });
     } catch (err) {
       console.error('Error assigning tenant:', err);
       setError(err.response?.data?.message || 'Error assigning tenant');
@@ -288,11 +306,18 @@ function OwnerDashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const updatedRoom = res.data;
+      const updatedRoomRaw = res.data;
+      const normalizedRoom = {
+        ...updatedRoomRaw,
+        tenants: (updatedRoomRaw.tenants || []).map((t) => ({
+          ...t,
+          paymentSchedule: t.paymentSchedule || updatedRoomRaw.paymentSchedule || '1st',
+        })),
+      };
 
       setRooms((r) => {
-        const updatedRooms = r[propertyId].map((room) =>
-          room.id === roomId ? updatedRoom : room
+        const updatedRooms = (r[propertyId] || []).map((room) =>
+          room.id === roomId ? normalizedRoom : room
         );
         return { ...r, [propertyId]: updatedRooms };
       });
@@ -329,6 +354,7 @@ function OwnerDashboard() {
               <th>Monthly Rent</th>
               <th>Capacity</th>
               <th>Amenities</th>
+              <th>Schedule</th>
               <th>Tenants</th>
               <th>Actions</th>
             </tr>
@@ -336,7 +362,7 @@ function OwnerDashboard() {
           <tbody>
             {propRooms.length === 0 ? (
               <tr>
-                <td colSpan="7" className="empty-row">No rooms added yet.</td>
+                <td colSpan="8" className="empty-row">No rooms added yet.</td>
               </tr>
             ) : (
               propRooms.map((r) => (
@@ -347,6 +373,7 @@ function OwnerDashboard() {
                     <td>${parseFloat(r.monthlyRent).toFixed(2)}</td>
                     <td>{r.capacity || '-'}</td>
                     <td>{r.amenities || '-'}</td>
+                    <td>{r.paymentSchedule || '1st'}</td>
                     <td>
                       <div className="tenants-list">
                         {(r.tenants && r.tenants.length > 0) ? (
@@ -354,6 +381,7 @@ function OwnerDashboard() {
                             {r.tenants.map((tenant) => (
                               <li key={tenant.id}>
                                 {tenant.firstName} {tenant.lastName}
+                                <span className="payment-schedule"> ({tenant.paymentSchedule || r.paymentSchedule || '1st'})</span>
                                 <button
                                   className="remove-tenant-btn"
                                   onClick={() => handleRemoveTenant(r.id, tenant.id, prop.id)}
@@ -381,20 +409,22 @@ function OwnerDashboard() {
                   </tr>
                   {showAssignTenantForm[r.id] && (
                     <tr className="assign-tenant-row">
-                      <td colSpan="7">
+                      <td colSpan="8">
                         <form
                           className="assign-tenant-form-inline"
                           onSubmit={(e) => handleAssignTenant(e, r.id, prop.id)}
                         >
-                          <input
-                            type="email"
-                            name="email"
-                            placeholder="Enter tenant email address"
-                            value={tenantForm.email}
-                            onChange={handleTenantInput}
-                            required
-                          />
-                          <button type="submit" className="submit-btn">Assign Tenant</button>
+                          <div className="form-row">
+                            <input
+                              type="email"
+                              name="email"
+                              placeholder="Enter tenant email address"
+                              value={(tenantFormByRoom[r.id] && tenantFormByRoom[r.id].email) || ''}
+                              onChange={(e) => handleTenantInputForRoom(r.id, e)}
+                              required
+                            />
+                            <button type="submit" className="submit-btn">Assign Tenant</button>
+                          </div>
                         </form>
                       </td>
                     </tr>
@@ -450,6 +480,16 @@ function OwnerDashboard() {
               value={roomForm.amenities}
               onChange={handleRoomInput}
             />
+            {/* NEW: owner selects default schedule for this room */}
+            <select
+              name="paymentSchedule"
+              value={roomForm.paymentSchedule}
+              onChange={handleRoomInput}
+              required
+            >
+              <option value="1st">1st of Month</option>
+              <option value="15th">15th of Month</option>
+            </select>
             <button type="submit" className="submit-btn">Add Room</button>
           </form>
         )}
@@ -459,8 +499,22 @@ function OwnerDashboard() {
 
   return (
     <div className="dashboard-container">
-      <h2>Owner Dashboard</h2>
-      <p>Welcome to your property management dashboard.</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h2 style={{ margin: 0 }}>Owner Dashboard</h2>
+          <p style={{ margin: 0 }}>Welcome to your property management dashboard.</p>
+        </div>
+        <div>
+          <button className="submit-btn" type="button" onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('userRole');
+            navigate('/', { replace: true });
+          }}>
+            Logout
+          </button>
+        </div>
+      </div>
 
       <div className="dashboard-content">
         <section>
@@ -508,7 +562,6 @@ function OwnerDashboard() {
 
           {properties.length > 0 ? (
             <>
-              {/* HEX GRID: shows up to 5 properties arranged in hex-outline */}
               <div className="hex-grid" role="list">
                 {properties.slice(0, 5).map((prop, idx) => (
                   <button
@@ -527,7 +580,6 @@ function OwnerDashboard() {
                 ))}
               </div>
 
-              {/* Expanded details panel for selected hexagon */}
               {selectedPropertyId && (
                 <div className="hex-details">
                   {(() => {
@@ -569,7 +621,6 @@ function OwnerDashboard() {
                           </div>
                         </div>
 
-                        {/* Render rooms dropdown here when expanded */}
                         {expanded[prop.id] && renderRoomsForProperty(prop)}
                       </>
                     );
@@ -582,14 +633,12 @@ function OwnerDashboard() {
           )}
         </section>
 
-        {/* TENANTS SECTION */}
         <section>
           <h3>Tenants</h3>
           <p>View and manage your current tenants across all properties.</p>
 
           {allTenants.length > 0 ? (
             <div className="tenants-section">
-              {/* Filter dropdown */}
               <div className="tenants-filter">
                 <label htmlFor="property-filter"><strong>Filter by Property:</strong></label>
                 <select
@@ -607,7 +656,6 @@ function OwnerDashboard() {
                 </select>
               </div>
 
-              {/* Tenants list with collapsible details */}
               <div className="tenants-list-container">
                 {filteredTenants.length > 0 ? (
                   filteredTenants.map((tenant) => (
@@ -630,7 +678,6 @@ function OwnerDashboard() {
                         </span>
                       </button>
 
-                      {/* Expanded details */}
                       {expandedTenantId === `${tenant.id}-${tenant.roomId}` && (
                         <div className="tenant-details">
                           <div className="detail-row">
@@ -652,6 +699,10 @@ function OwnerDashboard() {
                           <div className="detail-row">
                             <span className="detail-label">Room Number:</span>
                             <span className="detail-value">{tenant.roomNumber}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="detail-label">Payment Schedule:</span>
+                            <span className="detail-value">{tenant.paymentSchedule || 'N/A'}</span>
                           </div>
                         </div>
                       )}
