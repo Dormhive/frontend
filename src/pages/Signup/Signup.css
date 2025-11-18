@@ -1,0 +1,138 @@
+/* frontend/src/pages/Signup/Signup.css */
+.signup-container {
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.role-selector {
+  display: flex;
+  margin-bottom: 1.5rem;
+  border: 1px solid #007aff;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.role-selector button {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  background-color: #f9f9f9;
+  color: #007aff;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.role-selector button.active {
+  background-color: #007aff;
+  color: #fff;
+}
+
+.role-selector button:first-child {
+  border-right: 1px solid #007aff;
+}
+
+.signup-form .form-group {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.signup-form .form-group input {
+  flex: 1;
+}
+
+.signup-form input,
+.signup-form textarea {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box; /* Important for padding */
+  margin-bottom: 1rem;
+}
+
+.signup-form textarea {
+  min-height: 80px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.owner-fields {
+  margin-top: 1.5rem;
+  border-top: 1px solid #eee;
+  padding-top: 1.5rem;
+}
+
+.owner-fields h3 {
+  margin-top: 0;
+  text-align: left;
+}
+
+.terms-container {
+  margin-top: 1.5rem;
+  text-align: left;
+}
+
+.terms-box {
+  height: 100px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  background-color: #fdfdfd;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.terms-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 0.85rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: #007aff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 1rem;
+}
+
+.submit-btn:hover {
+  background-color: #0056b3;
+}
+
+.submit-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.form-error {
+  color: #d9534f;
+  background-color: #f9d6d5;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.form-success {
+  color: #5cb85c;
+  background-color: #dff0d8;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}

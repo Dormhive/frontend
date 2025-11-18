@@ -1,0 +1,38 @@
+.dashboard-section {
+  margin-top: 2rem;
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  text-align: left;
+}
+
+.dashboard-section h3 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #007aff;
+}
+
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.info-table th,
+.info-table td {
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.info-table th {
+  background-color: #f0f4f8;
+  font-weight: 600;
+}
+
+.activity-list {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  color: #555;
+}

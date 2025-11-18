@@ -1,0 +1,365 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #f9f3e6 0%, #fef5e7 100%);
+  min-height: 100vh;
+}
+
+.welcome-container {
+  display: flex;
+  height: 100vh;
+  background-image: url('./images/background.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Left Side - Illustration */
+.illustration-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 40px;
+  overflow: hidden;
+  background-image: url('./images/house.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.hive-container {
+  position: relative;
+  width: 300px;
+  height: 400px;
+  z-index: 10;
+}
+
+/* SVG Bee Animation */
+.bee {
+  position: absolute;
+  width: 100px;
+  height: 80px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  animation: beeFly 8s infinite ease-in-out;
+  z-index: 15;
+}
+
+@keyframes beeFly {
+  0% {
+    transform: translate(50px, 100px) scaleX(1);
+  }
+  25% {
+    transform: translate(200px, 50px) scaleX(1);
+  }
+  50% {
+    transform: translate(300px, 150px) scaleX(-1);
+  }
+  75% {
+    transform: translate(150px, 250px) scaleX(-1);
+  }
+  100% {
+    transform: translate(50px, 100px) scaleX(1);
+  }
+}
+
+.bee-wings {
+  animation: wingFlutter 0.2s infinite;
+  transform-origin: 45px 30px;
+}
+
+@keyframes wingFlutter {
+  0%, 100% {
+    transform: rotateZ(-15deg);
+  }
+  50% {
+    transform: rotateZ(15deg);
+  }
+}
+
+/* Hive Building SVG - Hidden */
+.hive-svg {
+  display: none;
+}
+
+/* Right Side - Form */
+.form-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.form-container {
+  width: 100%;
+  max-width: 420px;
+  background: white;
+  border-radius: 20px;
+  padding: 50px 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+}
+
+@keyframes floatContainer {
+  0%, 100% {
+    transform: translateY(0px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+  }
+  50% {
+    transform: translateY(-15px);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Header */
+.form-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.form-header h1 {
+  font-size: 48px;
+  color: #2c3e50;
+  margin-bottom: 5px;
+  font-weight: 700;
+}
+
+.form-header p {
+  font-size: 14px;
+  color: #95a5a6;
+  font-weight: 500;
+}
+
+/* Role Selection */
+.role-selection {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.role-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: 2px solid #ecf0f1;
+  background: white;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #95a5a6;
+}
+
+.role-btn.active {
+  background: #f4c430;
+  border-color: #f4c430;
+  color: white;
+  box-shadow: 0 4px 12px rgba(244, 196, 48, 0.3);
+}
+
+.role-btn:hover {
+  border-color: #f4c430;
+  transform: translateY(-2px);
+}
+
+/* Form Inputs */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  color: #7f8c8d;
+  margin-bottom: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #ecf0f1;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #4a9b8e;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(74, 155, 142, 0.1);
+}
+
+.form-group input::placeholder {
+  color: #bdc3c7;
+}
+
+/* Checkbox & Forgot Password */
+.form-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  font-size: 13px;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.remember-me input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4a9b8e;
+}
+
+.remember-me span {
+  cursor: pointer;
+  color: #7f8c8d;
+  margin: 0;
+  font-weight: 400;
+}
+
+.forgot-password {
+  color: #4a9b8e;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.forgot-password:hover {
+  color: #3a7b6e;
+}
+
+/* Login Button */
+.login-btn {
+  width: 100%;
+  padding: 14px;
+  background: #4a9b8e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+
+.login-btn:hover:not(:disabled) {
+  background: #3a7b6e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(74, 155, 142, 0.4);
+}
+
+.login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Sign Up Link */
+.signup-link {
+  text-align: center;
+  font-size: 14px;
+  color: #7f8c8d;
+}
+
+.signup-link a {
+  color: #4a9b8e;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.signup-link a:hover {
+  color: #3a7b6e;
+}
+
+/* Error Message */
+.error-message {
+  background: #fadbd8;
+  color: #c0392b;
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  border-left: 4px solid #c0392b;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .illustration-section {
+    display: none;
+  }
+
+  .welcome-container {
+    height: auto;
+  }
+
+  .form-section {
+    flex: 1;
+    min-height: 100vh;
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+@media (max-width: 768px) {
+  .form-container {
+    max-width: 100%;
+  }
+
+  .form-header h1 {
+    font-size: 36px;
+  }
+
+  .role-selection {
+    gap: 10px;
+  }
+
+  .role-btn {
+    padding: 10px 15px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-section {
+    padding: 20px;
+  }
+
+  .form-header h1 {
+    font-size: 28px;
+  }
+
+  .form-header p {
+    font-size: 12px;
+  }
+
+  .form-group input {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .login-btn {
+    padding: 12px;
+    font-size: 14px;
+  }
+}

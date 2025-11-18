@@ -1,0 +1,234 @@
+/* Full updated Dashboard.css — tight bee-like hex tiling, thick dark-orange outline, yellow interior,
+   add-hex dashed outline placed to the right, larger sizes, responsive. */
+
+/* Container basics */
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.dashboard-container h2 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  font-size: 28px;
+}
+
+.dashboard-container > p {
+  color: #7f8c8d;
+  margin-bottom: 1rem;
+}
+
+/* Sections */
+section {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin-bottom: 1rem;
+}
+section h3 { margin: 0 0 0.75rem 0; }
+
+/* === Honeycomb / Hexagon block ===
+   Uses CSS grid with negative gaps to tightly tile hexagons.
+   The Hexagon component renders an SVG polygon; CSS sizes and places them.
+*/
+
+/* Global hex sizing variables (adjust to scale) */
+:root {
+  --hex-w: 240px;   /* width of each hex cell area */
+  --hex-h: 196px;   /* height of each hex cell area */
+  --hex-stroke-color: #b24700;  /* dark orange */
+  --hex-fill-color: #ffd24d;    /* yellow interior (used as fallback) */
+}
+
+/* Hex grid: grid columns sized to hex width; negative gaps create tight honeycomb tiling */
+.hex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, var(--hex-w));
+  grid-auto-rows: var(--hex-h);
+  justify-content: start;
+  align-items: start;
+  column-gap: calc(var(--hex-w) * -0.18); /* pull columns together */
+  row-gap: calc(var(--hex-h) * -0.30);    /* overlap rows vertically */
+  width: 100%;
+  margin: 0.5rem 0 1rem 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Hex button reset - remove default square outlines */
+.hex {
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: var(--hex-w);
+  height: var(--hex-h);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  outline: none;
+  position: relative;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* SVG inside the button should fill the full cell */
+.hex-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none; /* keep interaction on the button */
+}
+
+/* Text container centered above the svg */
+.hex-inner {
+  position: absolute;
+  z-index: 2;
+  width: 86%;
+  text-align: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  pointer-events: none;
+}
+
+/* Title / address */
+.hex-title {
+  font-weight: 800;
+  color: #2b2000;
+  font-size: 16px;
+  line-height: 1;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hex-address {
+  font-size: 12px;
+  color: #4e3d18;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hover/selected visual treatment — subtle, no heavy animation */
+.hex:hover .hex-svg polygon {
+  filter: drop-shadow(0 8px 14px rgba(178,71,0,0.08));
+}
+.hex.selected .hex-svg polygon {
+  filter: drop-shadow(0 18px 36px rgba(138,55,0,0.14));
+  transform-origin: center;
+}
+
+/* Add-hex: make sure it renders last and visually sits to the right.
+   The component's SVG uses stroke-dasharray for dashed outline and renders '+' inside. */
+.hex-add {
+  order: 9999; /* keep last in DOM flow */
+  margin-left: auto; /* attempt to push to right of its row */
+  flex: 0 0 auto;
+}
+
+/* Accessibility focus ring for keyboard users */
+.hex:focus {
+  box-shadow: 0 0 0 6px rgba(178,71,0,0.12);
+  border-radius: 6px;
+}
+
+/* --- Rooms / Table / Forms / Buttons (kept minimal and functional) --- */
+
+.rooms-dropdown {
+  padding: 10px;
+  background: #fbfcfb;
+  overflow-x: auto;
+  margin-top: 10px;
+  border-radius: 6px;
+  border: 1px solid #eef6f2;
+}
+.rooms-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+}
+.rooms-table th,
+.rooms-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef6f2;
+  text-align: left;
+  font-size: 13px;
+}
+.rooms-table thead th {
+  background: #f1f6f3;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.add-property-form,
+.add-room-form {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+  padding: 10px;
+  border-radius: 6px;
+  background: #fbfbfb;
+  border: 1px solid #eef6f2;
+}
+.submit-btn,
+.add-property-btn,
+.add-room-inline-btn,
+.assign-tenant-btn,
+.view-rooms-btn {
+  background: #4a9b8e;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Tenants list */
+.tenants-list-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px,1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* Utility / empty states */
+.empty-row {
+  text-align: center;
+  color: #95a5a6;
+  padding: 2rem !important;
+}
+.empty-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 2rem;
+  color: #95a5a6;
+  font-size: 15px;
+}
+
+/* Responsive sizing adjustments for the hex grid */
+@media (max-width: 1200px) {
+  :root { --hex-w: 200px; --hex-h: 164px; }
+  .hex-grid { column-gap: calc(var(--hex-w) * -0.16); row-gap: calc(var(--hex-h) * -0.28); }
+}
+@media (max-width: 900px) {
+  :root { --hex-w: 160px; --hex-h: 132px; }
+  .hex-grid { grid-template-columns: repeat(auto-fit, var(--hex-w)); column-gap: calc(var(--hex-w) * -0.14); row-gap: calc(var(--hex-h) * -0.26); }
+  .hex-title { font-size: 14px; }
+  .hex-address { font-size: 11px; }
+  .rooms-table { min-width: 840px; }
+}
+@media (max-width: 600px) {
+  :root { --hex-w: 120px; --hex-h: 100px; }
+  .hex-grid { column-gap: calc(var(--hex-w) * -0.12); row-gap: calc(var(--hex-h) * -0.22); }
+  .hex-title { font-size: 12px; }
+  .hex-address { font-size: 10px; }
+}
+
+/* --- end of honeycomb block --- */
