@@ -1,23 +1,64 @@
+// ...existing code...
 import React from 'react';
-import Hexagon from './Hexagon';
+import defaultIcon from '../assets/beehive.jpg';
 
-export default function HexGrid({ properties = [], selectedId, onSelect, onAdd }) {
-  // render up to 5 properties in honeycomb layout; add-hex shown after last item
-  const items = properties.slice(0, 5);
+export default function HexGrid({ properties = [], selectedId, onSelect, onAddClick, onEdit, onDelete }) {
+  const items = (properties || []).slice(0, 5);
+
   return (
-    <div className="hex-grid" role="list" aria-label="Properties honeycomb">
+    <div className="property-tile-grid" role="list" aria-label="Properties">
       {items.map((p) => (
-        <Hexagon
+        <button
           key={p.id}
-          title={p.propertyName}
-          address={p.address}
-          selected={selectedId === p.id}
-          onClick={() => onSelect(p.id)}
-        />
+          className={`property-tile${selectedId === p.id ? ' selected' : ''}`}
+          onClick={() => onSelect && onSelect(p.id)}
+          role="listitem"
+          aria-pressed={selectedId === p.id}
+        >
+          <img
+            src={p.imageUrl || defaultIcon}
+            alt={p.propertyName || 'Property image'}
+            className="property-tile-img"
+          />
+          <div className="img-overlay" aria-hidden>
+            {/* Edit / delete small icons */}
+            <div style={{ display:'flex', gap:8 }}>
+              <button
+                type="button"
+                aria-label="Edit property"
+                title="Edit"
+                onClick={(e) => { e.stopPropagation(); onEdit && onEdit(p); }}
+                style={{ background:'transparent', border:'none', cursor:'pointer' }}
+              >
+                ✎
+              </button>
+              <button
+                type="button"
+                aria-label="Delete property"
+                title="Delete"
+                onClick={(e) => { e.stopPropagation(); onDelete && onDelete(p.id); }}
+                style={{ background:'transparent', border:'none', cursor:'pointer' }}
+              >
+                🗑
+              </button>
+            </div>
+          </div>
+
+          <div className="property-tile-info">
+            <div className="property-tile-title">{p.propertyName || 'Untitled Property'}</div>
+            <div className="property-tile-address">{p.address || 'No address provided'}</div>
+          </div>
+        </button>
       ))}
 
-      {/* ensure add hex is rendered last so CSS can place it to the right */}
-      <Hexagon key="add-hex" isAdd onClick={onAdd} ariaLabel="Add property" />
+      <button
+        className="property-tile add-tile"
+        onClick={() => onAddClick && onAddClick()}
+        aria-label="Add property"
+        title="Add property"
+      >
+        <span className="add-plus">+</span>
+      </button>
     </div>
   );
 }
