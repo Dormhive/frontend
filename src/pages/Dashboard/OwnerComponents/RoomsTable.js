@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AssignTenantForm from './AssignTenantForm';
 
 function RoomsTable({
@@ -15,12 +15,49 @@ function RoomsTable({
   handleAssignTenant,
   handleTenantInputForRoom,
   handleRemoveTenant,
+  handleUpdateRoom,
+  handleDeleteRoom,
 }) {
+  const [editingRoomId, setEditingRoomId] = useState(null);
+  const [editForm, setEditForm] = useState({
+    roomNumber: '',
+    type: '',
+    monthlyRent: '',
+    capacity: '',
+    amenities: '',
+    paymentSchedule: '1st',
+  });
+
+  const startEdit = (r) => {
+    setEditingRoomId(r.id);
+    setEditForm({
+      roomNumber: r.roomNumber || '',
+      type: r.type || '',
+      monthlyRent: r.monthlyRent || '',
+      capacity: r.capacity || '',
+      amenities: r.amenities || '',
+      paymentSchedule: r.paymentSchedule || '1st',
+    });
+  };
+
+  const onEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm((s) => ({ ...s, [name]: value }));
+  };
+
+  const saveEdit = async (e, roomId) => {
+    e.preventDefault();
+    await handleUpdateRoom(prop.id, roomId, editForm);
+    setEditingRoomId(null);
+  };
+
+  const removeRoom = async (roomId) => {
+    await handleDeleteRoom(prop.id, roomId);
+  };
+
   return (
     <div className="rooms-dropdown">
-      <div className="rooms-toolbar">
-        {/* Add Room button handled in PropertyDetails */}
-      </div>
+      <div className="rooms-toolbar" />
       <table className="rooms-table">
         <thead>
           <tr>
@@ -45,7 +82,7 @@ function RoomsTable({
                 <tr>
                   <td>{r.roomNumber}</td>
                   <td>{r.type}</td>
-                  <td>${parseFloat(r.monthlyRent).toFixed(2)}</td>
+                  <td>${parseFloat(r.monthlyRent || 0).toFixed(2)}</td>
                   <td>{r.capacity || '-'}</td>
                   <td>{r.amenities || '-'}</td>
                   <td>{r.paymentSchedule || '1st'}</td>
@@ -80,8 +117,36 @@ function RoomsTable({
                     >
                       {showAssignTenantForm[r.id] ? 'Hide' : 'Add Tenant'}
                     </button>
+                    <button className="cancel-btn" onClick={() => startEdit(r)} style={{ marginLeft: 8 }}>Edit</button>
+                    <button className="cancel-btn" onClick={() => removeRoom(r.id)} style={{ marginLeft: 8 }}>Delete</button>
                   </td>
                 </tr>
+
+                {editingRoomId === r.id && (
+                  <tr className="edit-room-row">
+                    <td colSpan="8">
+                      <form className="edit-room-form" onSubmit={(e) => saveEdit(e, r.id)}>
+                        <input name="roomNumber" value={editForm.roomNumber} onChange={onEditChange} required />
+                        <select name="type" value={editForm.type} onChange={onEditChange} required>
+                          <option value="">Select Room Type</option>
+                          {ROOM_TYPES.map((rt) => <option key={rt} value={rt}>{rt}</option>)}
+                        </select>
+                        <input name="monthlyRent" type="number" value={editForm.monthlyRent} onChange={onEditChange} required />
+                        <input name="capacity" type="number" value={editForm.capacity} onChange={onEditChange} />
+                        <input name="amenities" value={editForm.amenities} onChange={onEditChange} />
+                        <select name="paymentSchedule" value={editForm.paymentSchedule} onChange={onEditChange} required>
+                          <option value="1st">1st</option>
+                          <option value="15th">15th</option>
+                        </select>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                          <button type="submit" className="submit-btn">Save</button>
+                          <button type="button" className="cancel-btn" onClick={() => setEditingRoomId(null)}>Cancel</button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                )}
+
                 {showAssignTenantForm[r.id] && (
                   <tr className="assign-tenant-row">
                     <td colSpan="8">
@@ -100,6 +165,7 @@ function RoomsTable({
           )}
         </tbody>
       </table>
+
       {showAddRoomForm && (
         <form className="add-room-form" onSubmit={(e) => handleAddRoomFor(e, prop.id)}>
           <input
