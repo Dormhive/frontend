@@ -1,65 +1,24 @@
-/* ...existing code... */
-.summary-wrap { display:flex; flex-direction:column; gap:12px; }
+/* Cleaned Overview styles for the Summary section (removed debug outlines and duplicated overrides) */
+
+.summary-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .urgent-banner {
   background: #ff6b6b;
   color: #fff;
-  font-weight:800;
-  padding:8px 12px;
-  border-radius:8px;
-  text-align:center;
-  box-shadow: 0 6px 18px rgba(209, 46, 46, 0.12);
+  font-weight: 800;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(209,46,46,0.12);
 }
 
-/* Ensure grid and cards (if you already have these, this won't hurt) */
+/* Summary grid (occupancy, activity, concerns, finance, reminders) */
 .summary-grid-subdiv {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr;
-  grid-template-rows: auto auto;
-  grid-template-areas:
-    "occupancy activity concerns"
-    "occupancy finance finance";
-  gap: 14px;
-  margin: 8px 0 18px 0;
-}
-.occupancy-card { grid-area: occupancy; }
-.activity-card { grid-area: activity; }
-.concerns-card { grid-area: concerns; }
-.finance-card { grid-area: finance; }
-
-/* make concern badge look like the screenshot */
-.concern-badge {
-  background: #f44336;
-  color: #fff;
-  padding:6px 10px;
-  border-radius:20px;
-  font-weight:800;
-  border: none;
-  cursor: pointer;
-}
-
-/* emphasis on occupancy card */
-.occ-percent { font-size:2.0rem; font-weight:800; }
-.occ-bar { background:#eef5f4; border-radius:8px; height:12px; overflow:hidden; }
-.occ-bar-fill { background: linear-gradient(90deg,#f7b500,#d89a00); height:100%; transition:width .5s ease; }
-
-/* small responsive tweaks */
-@media (max-width: 980px) {
-  .summary-grid-subdiv { grid-template-columns: 1fr 1fr; grid-template-areas: "occupancy occupancy" "activity concerns" "finance finance"; }
-}
-@media (max-width: 600px) {
-  .summary-grid-subdiv { grid-template-columns: 1fr; grid-template-areas: "occupancy" "activity" "concerns" "finance"; }
-}
-
-/* ...existing code... */
-.summary-wrap { outline: 3px dashed rgba(255,0,0,0.65); padding:6px; }
-.summary-grid-subdiv { outline: 2px dashed rgba(0,0,255,0.45); background: rgba(255,255,255,0.02); }
-.card { outline: 2px solid rgba(0,128,0,0.6); background: #ffffff !important; box-shadow: 0 14px 40px rgba(8,12,18,0.12) !important; border-radius:14px !important; }
-.urgent-banner { display:block !important; }
-
-/* add/update grid to include Reminders and ensure visible cards */
-
-.summary-grid-subdiv {
-  display: grid !important;
   grid-template-columns: 1.6fr 1fr 1fr;
   grid-template-rows: auto auto;
   grid-template-areas:
@@ -70,107 +29,61 @@
   align-items: start;
 }
 
-/* map classes to areas */
+/* Map classes to grid areas */
 .occupancy-card { grid-area: occupancy; }
 .activity-card  { grid-area: activity; }
 .concerns-card  { grid-area: concerns; }
 .finance-card   { grid-area: finance; }
 .reminders-card { grid-area: reminders; }
 
-/* reminders styling */
-.reminders-body { min-height: 86px; display:flex; align-items:center; color:var(--muted,#7f8c8d); }
-.reminders-list { margin:0; padding-left:18px; }
-.reminder-empty { font-style:italic; color:var(--muted,#7f8c8d); }
+/* Make sure cards have base styles (Dashboard.css contains main card rules) */
+.card {
+  background: linear-gradient(180deg,#ffffff 0%, #fffaf4 100%);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 14px 40px rgba(8,12,18,0.10);
+  border: 1px solid rgba(14,20,24,0.06);
+}
 
-/* ensure cards visible */
-.card { background: linear-gradient(180deg,#ffffff 0%, #fffaf4 100%); border-radius: 12px; padding: 14px; box-shadow: 0 14px 40px rgba(8,12,18,0.10); border: 1px solid rgba(14,20,24,0.06); }
+/* Occupancy specific */
+.occ-percent { font-size: 2.0rem; font-weight: 800; }
+.occ-bar { background: #eef5f4; border-radius: 8px; height: 12px; overflow: hidden; }
+.occ-bar-fill { background: linear-gradient(90deg,#f7b500,#d89a00); height: 100%; transition: width .5s ease; }
 
-/* responsive */
+/* Concerns badge */
+.concern-badge {
+  background: #f44336;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+}
+
+/* Reminders */
+.reminders-body { min-height: 86px; display: flex; align-items: center; color: var(--muted, #7f8c8d); }
+.reminders-list { margin: 0; padding-left: 18px; }
+.reminder-empty { font-style: italic; color: var(--muted, #7f8c8d); }
+
+/* Responsive fallbacks */
 @media (max-width: 980px) {
-  .summary-grid-subdiv { grid-template-columns: 1fr 1fr; grid-template-areas: "occupancy occupancy" "activity concerns" "finance reminders"; }
-}
-@media (max-width: 600px) {
-  .summary-grid-subdiv { grid-template-columns: 1fr; grid-template-areas: "occupancy" "activity" "concerns" "finance" "reminders"; }
-}
-
-/* ...existing code... */
-
-/* --- Force Overview summary grid/card layout (override other imports) --- */
-.dashboard-container .summary-wrap {
-  display: block !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-.dashboard-container .summary-wrap .urgent-banner {
-  display: block !important;
-  background: #ff6b6b !important;
-  color: #fff !important;
-  padding: 8px 12px !important;
-  border-radius: 8px !important;
-  text-align: center !important;
-  font-weight: 800 !important;
-  margin-bottom: 12px !important;
-}
-
-/* main grid: occupancy, activity, concerns, finance, reminders */
-.dashboard-container .summary-wrap .summary-grid-subdiv {
-  display: grid !important;
-  grid-template-columns: 1.6fr 1fr 1fr !important;
-  grid-template-rows: auto auto !important;
-  grid-template-areas:
-    "occupancy activity concerns"
-    "occupancy finance reminders" !important;
-  gap: 18px !important;
-  width: 100% !important;
-  align-items: start !important;
-  margin: 0 0 18px 0 !important;
-}
-
-/* explicit mappings */
-.dashboard-container .summary-wrap .occupancy-card { grid-area: occupancy !important; }
-.dashboard-container .summary-wrap .activity-card  { grid-area: activity !important; }
-.dashboard-container .summary-wrap .concerns-card  { grid-area: concerns !important; }
-.dashboard-container .summary-wrap .finance-card   { grid-area: finance !important; }
-.dashboard-container .summary-wrap .reminders-card { grid-area: reminders !important; }
-
-/* strong card base to ensure visibility */
-.dashboard-container .summary-wrap .card {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 10px !important;
-  background: linear-gradient(180deg,#ffffff 0%, #fffaf4 100%) !important;
-  border-radius: 14px !important;
-  padding: 16px !important;
-  box-shadow: 0 14px 40px rgba(8,12,18,0.10) !important;
-  border: 1px solid rgba(14,20,24,0.06) !important;
-  color: var(--hive-dark, #153233) !important;
-  min-height: 90px !important;
-  box-sizing: border-box !important;
-}
-
-/* small helpers */
-.dashboard-container .summary-wrap .occ-bar-fill { transition: width .5s ease !important; }
-.dashboard-container .summary-wrap .concern-badge { cursor: pointer !important; }
-.dashboard-container .summary-wrap .reminders-list { padding-left: 16px !important; }
-
-/* responsive fallbacks */
-@media (max-width: 980px) {
-  .dashboard-container .summary-wrap .summary-grid-subdiv {
-    grid-template-columns: 1fr 1fr !important;
+  .summary-grid-subdiv {
+    grid-template-columns: 1fr 1fr;
     grid-template-areas:
       "occupancy occupancy"
       "activity concerns"
-      "finance reminders" !important;
+      "finance reminders";
   }
 }
 @media (max-width: 600px) {
-  .dashboard-container .summary-wrap .summary-grid-subdiv {
-    grid-template-columns: 1fr !important;
+  .summary-grid-subdiv {
+    grid-template-columns: 1fr;
     grid-template-areas:
       "occupancy"
       "activity"
       "concerns"
       "finance"
-      "reminders" !important;
+      "reminders";
   }
 }

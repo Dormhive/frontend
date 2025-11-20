@@ -5,6 +5,7 @@ function RoomsTable({
   prop,
   rooms,
   showAddRoomForm,
+  // roomForm and handleRoomInput are kept for compatibility but Add Room uses local state now
   roomForm,
   handleRoomInput,
   handleAddRoomFor,
@@ -20,6 +21,16 @@ function RoomsTable({
 }) {
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editForm, setEditForm] = useState({
+    roomNumber: '',
+    type: '',
+    monthlyRent: '',
+    capacity: '',
+    amenities: '',
+    paymentSchedule: '1st',
+  });
+
+  // LOCAL add-room form state (fixes problems when shared parent state wasn't updated)
+  const [localAddRoom, setLocalAddRoom] = useState({
     roomNumber: '',
     type: '',
     monthlyRent: '',
@@ -53,6 +64,34 @@ function RoomsTable({
 
   const removeRoom = async (roomId) => {
     await handleDeleteRoom(prop.id, roomId);
+  };
+
+  const onLocalAddChange = (e) => {
+    const { name, value } = e.target;
+    setLocalAddRoom((s) => ({ ...s, [name]: value }));
+  };
+
+  const submitLocalAdd = async (e) => {
+    e.preventDefault();
+    // call parent with (propertyId, data)
+    await handleAddRoomFor(prop.id, {
+      roomNumber: localAddRoom.roomNumber,
+      type: localAddRoom.type,
+      monthlyRent: localAddRoom.monthlyRent,
+      capacity: localAddRoom.capacity,
+      amenities: localAddRoom.amenities,
+      paymentSchedule: localAddRoom.paymentSchedule,
+    });
+    // clear local form
+    setLocalAddRoom({ roomNumber: '', type: '', monthlyRent: '', capacity: '', amenities: '', paymentSchedule: '1st' });
+  };
+
+  // NEW: confirm before removing a tenant
+  const confirmRemoveTenant = (roomId, tenantId, tenantName) => {
+    const label = tenantName ? `"${tenantName}"` : 'this tenant';
+    const ok = window.confirm(`Remove ${label} from room ${roomId}? This action cannot be undone.`);
+    if (!ok) return;
+    handleRemoveTenant(roomId, tenantId, prop.id);
   };
 
   return (
@@ -91,13 +130,17 @@ function RoomsTable({
                       {(r.tenants && r.tenants.length > 0) ? (
                         <ul>
                           {r.tenants.map((tenant) => (
-                            <li key={tenant.id}>
-                              {tenant.firstName} {tenant.lastName}
-                              <span className="payment-schedule"> ({tenant.paymentSchedule || r.paymentSchedule || '1st'})</span>
+                            <li key={tenant.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span>
+                                {tenant.firstName} {tenant.lastName}
+                                <span className="payment-schedule"> ({tenant.paymentSchedule || r.paymentSchedule || '1st'})</span>
+                              </span>
                               <button
                                 className="remove-tenant-btn"
-                                onClick={() => handleRemoveTenant(r.id, tenant.id, prop.id)}
+                                onClick={() => confirmRemoveTenant(r.id, tenant.id, `${tenant.firstName} ${tenant.lastName}`)}
                                 type="button"
+                                aria-label={`Remove tenant ${tenant.firstName} ${tenant.lastName}`}
+                                style={{ marginLeft: 8 }}
                               >
                                 ✕
                               </button>
@@ -167,19 +210,19 @@ function RoomsTable({
       </table>
 
       {showAddRoomForm && (
-        <form className="add-room-form" onSubmit={(e) => handleAddRoomFor(e, prop.id)}>
+        <form className="add-room-form" onSubmit={submitLocalAdd}>
           <input
             type="text"
             name="roomNumber"
             placeholder="Room Number"
-            value={roomForm.roomNumber}
-            onChange={handleRoomInput}
+            value={localAddRoom.roomNumber}
+            onChange={onLocalAddChange}
             required
           />
           <select
             name="type"
-            value={roomForm.type}
-            onChange={handleRoomInput}
+            value={localAddRoom.type}
+            onChange={onLocalAddChange}
             required
           >
             <option value="">Select Room Type</option>
@@ -193,28 +236,28 @@ function RoomsTable({
             type="number"
             name="monthlyRent"
             placeholder="Monthly Rent"
-            value={roomForm.monthlyRent}
-            onChange={handleRoomInput}
+            value={localAddRoom.monthlyRent}
+            onChange={onLocalAddChange}
             required
           />
           <input
             type="number"
             name="capacity"
             placeholder="Capacity"
-            value={roomForm.capacity}
-            onChange={handleRoomInput}
+            value={localAddRoom.capacity}
+            onChange={onLocalAddChange}
           />
           <input
             type="text"
             name="amenities"
             placeholder="Amenities"
-            value={roomForm.amenities}
-            onChange={handleRoomInput}
+            value={localAddRoom.amenities}
+            onChange={onLocalAddChange}
           />
           <select
             name="paymentSchedule"
-            value={roomForm.paymentSchedule}
-            onChange={handleRoomInput}
+            value={localAddRoom.paymentSchedule}
+            onChange={onLocalAddChange}
             required
           >
             <option value="1st">1st of Month</option>

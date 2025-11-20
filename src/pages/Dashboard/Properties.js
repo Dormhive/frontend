@@ -18,7 +18,12 @@ export default function PropertiesPage() {
   // UI state for property details / rooms
   const [expanded, setExpanded] = useState({});
   const [showAddRoomForm, setShowAddRoomForm] = useState({});
-  const [roomForm, setRoomForm] = useState({
+  // Per-room "assign tenant" visibility and form state
+  const [showAssignTenantForm, setShowAssignTenantForm] = useState({});
+  const [tenantFormByRoom, setTenantFormByRoom] = useState({});
+
+  // NOTE: roomForm is no longer used for the Add Room inline form (RoomsTable uses local state)
+  const [roomForm] = useState({
     roomNumber: '',
     type: '',
     monthlyRent: '',
@@ -56,15 +61,18 @@ export default function PropertiesPage() {
       const props = res.data || [];
       setProperties(props);
 
-      // initialize expanded / add-room state for each property
+      // initialize expanded / add-room / assign-tenant state for each property
       const initialExpanded = {};
       const initialAddForm = {};
+      const initialAssignForm = {};
       props.forEach((p) => {
         initialExpanded[p.id] = false;
         initialAddForm[p.id] = false;
+        initialAssignForm[p.id] = {}; // will hold per-room keys when used
       });
       setExpanded(initialExpanded);
       setShowAddRoomForm(initialAddForm);
+      setShowAssignTenantForm(initialAssignForm);
 
       await fetchAllRooms(props);
     } catch (err) {
@@ -140,21 +148,39 @@ export default function PropertiesPage() {
     setSelectedPropertyId(propertyId);
   };
 
+  // When opening Add Room ensure the property is expanded and selected so RoomsTable is mounted
   const toggleAddRoomFormFor = (propertyId) => {
-    setShowAddRoomForm((s) => ({ ...s, [propertyId]: !s[propertyId] }));
-    setRoomForm({ roomNumber: '', type: '', monthlyRent: '', capacity: '', amenities: '', paymentSchedule: '1st' });
+    setShowAddRoomForm((s) => {
+      const next = { ...s, [propertyId]: !s[propertyId] };
+      // if we're opening the add form, also expand property and select it
+      if (next[propertyId]) {
+        setExpanded((ex) => ({ ...ex, [propertyId]: true }));
+        setSelectedPropertyId(propertyId);
+      }
+      return next;
+    });
   };
 
-  const handleRoomInput = (e) => {
+  // Toggle per-room assign tenant form visibility
+  const toggleAssignTenantFormFor = (roomId) => {
+    setShowAssignTenantForm((s) => {
+      const next = { ...(s || {}) };
+      next[roomId] = !next[roomId];
+      return next;
+    });
+  };
+
+  // tenant input per room
+  const handleTenantInputForRoom = (roomId, e) => {
     const { name, value } = e.target;
-    setRoomForm((s) => ({ ...s, [name]: value }));
+    setTenantFormByRoom((s) => ({ ...(s || {}), [roomId]: { ...(s?.[roomId] || {}), [name]: value } }));
   };
 
-  const handleAddRoomFor = async (e, propertyId) => {
-    e.preventDefault();
+  // NOTE: handleAddRoomFor now accepts (propertyId, data)
+  const handleAddRoomFor = async (propertyId, data) => {
     setError('');
-    const { roomNumber, type, monthlyRent, capacity, amenities, paymentSchedule } = roomForm;
-    if (!roomNumber || !type || monthlyRent === '' || monthlyRent === null) {
+    const { roomNumber, type, monthlyRent } = data;
+    if (!roomNumber || !type || monthlyRent === '' || monthlyRent === null || monthlyRent === undefined) {
       setError('Please fill required room fields (number, type, monthly rent).');
       return;
     }
@@ -162,7 +188,7 @@ export default function PropertiesPage() {
       const token = localStorage.getItem('token');
       const res = await axios.post(
         `${API_URL}/properties/${propertyId}/rooms`,
-        { roomNumber, type, monthlyRent, capacity, amenities, paymentSchedule },
+        data,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const savedRoom = res.data;
@@ -171,7 +197,6 @@ export default function PropertiesPage() {
         return { ...r, [propertyId]: list };
       });
       setShowAddRoomForm((s) => ({ ...s, [propertyId]: false }));
-      setRoomForm({ roomNumber: '', type: '', monthlyRent: '', capacity: '', amenities: '', paymentSchedule: '1st' });
     } catch (err) {
       setError(err.response?.data?.message || 'Error adding room');
     }
@@ -204,15 +229,30 @@ export default function PropertiesPage() {
         const list = (r[propertyId] || []).filter((rm) => rm.id !== roomId);
         return { ...r, [propertyId]: list };
       });
+      // hide assign form if open
+      setShowAssignTenantForm((s) => {
+        const next = { ...(s || {}) };
+        delete next[roomId];
+        return next;
+      });
+      setTenantFormByRoom((s) => {
+        const next = { ...(s || {}) };
+        delete next[roomId];
+        return next;
+      });
     } catch (err) {
       setError(err.response?.data?.message || 'Error deleting room');
     }
   };
 
-  const handleAssignTenant = async (e, roomId, propertyId, tenantEmail) => {
+  // assign tenant: read tenant email + paymentSchedule from tenantFormByRoom[roomId]
+  const handleAssignTenant = async (e, roomId, propertyId) => {
     e.preventDefault();
     setError('');
-    const email = (tenantEmail || '').trim();
+    const form = tenantFormByRoom?.[roomId] || {};
+    const email = (form.email || '').trim();
+    const paymentSchedule = form.paymentSchedule || undefined; // undefined => backend will fall back to room default
+
     if (!email) {
       setError('Please enter tenant email address.');
       return;
@@ -221,7 +261,7 @@ export default function PropertiesPage() {
       const token = localStorage.getItem('token');
       const res = await axios.post(
         `${API_URL}/properties/${propertyId}/rooms/${roomId}/assign-tenant`,
-        { tenantEmail: email },
+        { tenantEmail: email, paymentSchedule },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const updatedRoom = res.data;
@@ -229,6 +269,9 @@ export default function PropertiesPage() {
         const updated = (r[propertyId] || []).map((room) => (room.id === roomId ? updatedRoom : room));
         return { ...r, [propertyId]: updated };
       });
+      // clear tenant input and hide form
+      setTenantFormByRoom((s) => ({ ...(s || {}), [roomId]: { email: '', paymentSchedule: '1st' } }));
+      setShowAssignTenantForm((s) => ({ ...(s || {}), [roomId]: false }));
     } catch (err) {
       setError(err.response?.data?.message || 'Error assigning tenant');
     }
@@ -289,14 +332,14 @@ export default function PropertiesPage() {
         showAddRoomForm={showAddRoomForm}
         toggleAddRoomFormFor={toggleAddRoomFormFor}
         roomForm={roomForm}
-        handleRoomInput={handleRoomInput}
+        handleRoomInput={() => {}}
         handleAddRoomFor={handleAddRoomFor}
         ROOM_TYPES={ROOM_TYPES}
-        showAssignTenantForm={{}} // kept simple here; RoomsTable controls UI
-        toggleAssignTenantFormFor={() => {}}
-        tenantFormByRoom={{}}
+        showAssignTenantForm={showAssignTenantForm}
+        toggleAssignTenantFormFor={toggleAssignTenantFormFor}
+        tenantFormByRoom={tenantFormByRoom}
         handleAssignTenant={handleAssignTenant}
-        handleTenantInputForRoom={() => {}}
+        handleTenantInputForRoom={handleTenantInputForRoom}
         handleRemoveTenant={handleRemoveTenant}
         handleUpdateProperty={handleUpdateProperty}
         handleDeleteProperty={handleDeleteProperty}
