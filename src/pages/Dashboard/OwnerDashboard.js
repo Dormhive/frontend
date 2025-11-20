@@ -1,3 +1,4 @@
+// ...existing code...
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +8,7 @@ import PropertyHexGrid from './OwnerComponents/PropertyHexGrid';
 import PropertyDetails from './OwnerComponents/PropertyDetails';
 import AddPropertyForm from './OwnerComponents/AddPropertyForm';
 import TenantsSection from './OwnerComponents/TenantsSection';
+import SummarySection from './OwnerComponents/SummarySection';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -14,7 +16,6 @@ export default function OwnerDashboard() {
   const navigate = useNavigate();
 
   const [showAddPropertyForm, setShowAddPropertyForm] = useState(false);
-  const [showPropertyDetails, setShowPropertyDetails] = useState(false);
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -171,7 +172,7 @@ export default function OwnerDashboard() {
       setExpanded((ex) => ({ ...ex, [newProp.id]: false }));
       setShowAddRoomForm((sf) => ({ ...sf, [newProp.id]: false }));
       setPropertyForm({ propertyName: '', address: '', description: '' });
-      setShowAddPropertyForm(false); // close modal on success
+      setShowAddPropertyForm(false);
     } catch (err) {
       setError(err.response?.data?.message || 'Error adding property');
     } finally {
@@ -283,34 +284,29 @@ export default function OwnerDashboard() {
     }
   };
 
-  // When a tile is clicked open details modal (do not remove existing behavior)
   const handleSelectProperty = (propertyId) => {
-    // toggle selection as before
-    setSelectedPropertyId((prev) => {
-      const next = prev === propertyId ? null : propertyId;
-      setShowPropertyDetails(next !== null);
-      return next;
-    });
+    setSelectedPropertyId((prev) => (prev === propertyId ? null : propertyId));
   };
 
   const handleShowAddPropertyForm = () => setShowAddPropertyForm(true);
 
-  const closeAddPropertyModal = () => setShowAddPropertyForm(false);
-  const closePropertyDetailsModal = () => {
-    setShowPropertyDetails(false);
-    setSelectedPropertyId(null);
-  };
+  // --- Summary computations ---
+  const totalProperties = properties.length;
+  const totalRooms = Object.values(rooms).reduce((sum, arr) => sum + ((arr && arr.length) || 0), 0);
+  const occupiedRooms = Object.values(rooms).reduce((sum, arr) => {
+    const occ = (arr || []).filter(r => (r.tenants && r.tenants.length > 0)).length;
+    return sum + occ;
+  }, 0);
+  const availableRooms = Math.max(0, totalRooms - occupiedRooms);
+  const totalTenants = allTenants.length;
 
   // --- Render ---
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header" style={{ position:'relative' }}>
-        <div className="brand">
-          <img src="/assets/logo.png" alt="DormHive" onError={(e)=>{e.target.style.display='none'}} />
-          <div>
-            <h2 style={{ margin: 0 }}>Owner Dashboard</h2>
-            <p style={{ margin: 0 }}>Welcome to your property management dashboard.</p>
-          </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position:'relative' }}>
+        <div>
+          <h2 style={{ margin: 0 }}>Owner Dashboard</h2>
+          <p style={{ margin: 0 }}>Welcome to your property management dashboard.</p>
         </div>
         <div>
           <button className="submit-btn" type="button" onClick={() => {
@@ -324,7 +320,16 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
-      <div className="dashboard-content">
+      {/* Summary - moved into separate component */}
+      <SummarySection
+        totalProperties={totalProperties}
+        totalRooms={totalRooms}
+        occupiedRooms={occupiedRooms}
+        availableRooms={availableRooms}
+        totalTenants={totalTenants}
+      />
+
+      <div className="dashboard-content" style={{ marginTop: 14 }}>
         <section>
           <h3>My Properties</h3>
 
@@ -333,6 +338,42 @@ export default function OwnerDashboard() {
             selectedPropertyId={selectedPropertyId}
             handleSelectProperty={handleSelectProperty}
             handleShowAddPropertyForm={handleShowAddPropertyForm}
+          />
+
+          {/* Add form appears below the tiles */}
+          {showAddPropertyForm && (
+            <div className="add-property-panel">
+              <AddPropertyForm
+                showAddPropertyForm={showAddPropertyForm}
+                setShowAddPropertyForm={setShowAddPropertyForm}
+                propertyForm={propertyForm}
+                handlePropertyInput={handlePropertyInput}
+                handleAddProperty={handleAddProperty}
+                loading={loading}
+                error={error}
+              />
+            </div>
+          )}
+
+          <PropertyDetails
+            selectedPropertyId={selectedPropertyId}
+            setSelectedPropertyId={setSelectedPropertyId}
+            properties={properties}
+            expanded={expanded}
+            toggleExpand={toggleExpand}
+            showAddRoomForm={showAddRoomForm}
+            toggleAddRoomFormFor={toggleAddRoomFormFor}
+            roomForm={roomForm}
+            handleRoomInput={handleRoomInput}
+            handleAddRoomFor={handleAddRoomFor}
+            rooms={rooms}
+            ROOM_TYPES={ROOM_TYPES}
+            showAssignTenantForm={showAssignTenantForm}
+            toggleAssignTenantFormFor={toggleAssignTenantFormFor}
+            tenantFormByRoom={tenantFormByRoom}
+            handleAssignTenant={handleAssignTenant}
+            handleTenantInputForRoom={handleTenantInputForRoom}
+            handleRemoveTenant={handleRemoveTenant}
           />
         </section>
 
@@ -353,59 +394,6 @@ export default function OwnerDashboard() {
           <p>Track your rental income.</p>
         </section>
       </div>
-
-      {/* Add Property Modal */}
-      {showAddPropertyForm && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Add property">
-          <div className="modal-card">
-            <div className="modal-close">
-              <button onClick={closeAddPropertyModal} className="cancel-btn">×</button>
-            </div>
-            <AddPropertyForm
-              showAddPropertyForm={showAddPropertyForm}
-              setShowAddPropertyForm={setShowAddPropertyForm}
-              propertyForm={propertyForm}
-              handlePropertyInput={handlePropertyInput}
-              handleAddProperty={handleAddProperty}
-              loading={loading}
-              error={error}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Property Details Modal */}
-      {showPropertyDetails && selectedPropertyId != null && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Property details">
-          <div className="modal-card">
-            <div className="modal-close">
-              <button onClick={closePropertyDetailsModal} className="cancel-btn">×</button>
-            </div>
-            <PropertyDetails
-              selectedPropertyId={selectedPropertyId}
-              setSelectedPropertyId={setSelectedPropertyId}
-              properties={properties}
-              expanded={expanded}
-              toggleExpand={toggleExpand}
-              showAddRoomForm={showAddRoomForm}
-              toggleAddRoomFormFor={toggleAddRoomFormFor}
-              roomForm={roomForm}
-              handleRoomInput={handleRoomInput}
-              handleAddRoomFor={handleAddRoomFor}
-              rooms={rooms}
-              ROOM_TYPES={ROOM_TYPES}
-              showAssignTenantForm={showAssignTenantForm}
-              toggleAssignTenantFormFor={toggleAssignTenantFormFor}
-              tenantFormByRoom={tenantFormByRoom}
-              handleAssignTenant={handleAssignTenant}
-              handleTenantInputForRoom={handleTenantInputForRoom}
-              handleRemoveTenant={handleRemoveTenant}
-              // pass optional onClose so component can close itself if needed
-              onClose={closePropertyDetailsModal}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

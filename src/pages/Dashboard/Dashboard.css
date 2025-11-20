@@ -1,4 +1,3 @@
-// ...existing code...
 /* DormHive — Hive-themed dashboard styles (applied without changing functionality) */
 
 /* Palette */
@@ -12,8 +11,12 @@
   --panel-shadow: 0 12px 36px rgba(16,24,32,0.06);
   --soft-shadow: 0 6px 18px rgba(16,24,32,0.04);
   --radius: 14px;
-  --tile-height: 180px;
+
+  /* Fixed tile sizing */
+  --tile-width: 220px; /* fixed tile width */
+  --tile-height: 200px; /* fixed tile height (includes image + info) */
   --tile-img-height: 96px;
+
   --max-width: 1400px;
   --gutter: 24px;
   --accent: linear-gradient(180deg, rgba(247,181,0,0.12), rgba(216,154,0,0.06));
@@ -109,12 +112,16 @@ section h3{
 }
 
 /* --- Property tiles: square with hive flavor --- */
+
+/* Grid with fixed tile columns; tiles wrap to next row when space is constrained */
 .property-tile-grid{
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(var(--tile-width), var(--tile-width)));
+  grid-auto-rows: var(--tile-height);
   gap:18px;
   align-items:start;
   padding: 6px 0 2px 0;
+  justify-content: center;
 }
 
 /* Tile */
@@ -123,7 +130,7 @@ section h3{
   border-radius:12px;
   border:1px solid rgba(14,20,24,0.04);
   overflow:hidden;
-  min-height: var(--tile-height);
+  height: var(--tile-height);
   display:flex;
   flex-direction:column;
   align-items:stretch;
@@ -131,6 +138,8 @@ section h3{
   transition: transform .18s ease, box-shadow .18s ease, border-color .12s;
   cursor:pointer;
   position:relative;
+  width:100%; /* fills the fixed grid column */
+  box-sizing: border-box;
 }
 
 /* hover / selected */
@@ -170,6 +179,7 @@ section h3{
   flex-direction:column;
   gap:6px;
   flex:1 1 auto;
+  justify-content:center;
 }
 .property-tile-title{ font-weight:700; color:var(--hive-dark); font-size:1rem; }
 .property-tile-address{ font-size:.85rem; color:var(--muted); }
@@ -246,22 +256,7 @@ section .earnings { color:var(--muted); }
 /* small helper */
 .form-error{ color:#b23; margin-top:8px; font-size:.9rem; }
 
-/* Responsive tweaks */
-@media (max-width: 1000px){
-  .dashboard-container{ padding:18px; }
-  .property-tile-grid{ gap:14px; }
-  :root{ --tile-height:150px; --tile-img-height:78px; }
-}
-
-@media (max-width: 600px){
-  .dashboard-header{ flex-direction:column; align-items:flex-start; gap:8px; }
-  .dashboard-container::before, .dashboard-container::after{ display:none; }
-  .property-tile-grid{ grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; }
-}
-
-
-
-/* Add modal styles (append to existing Dashboard.css) */
+/* Modal styles (if used) */
 .modal-overlay{
   position: fixed;
   inset: 0;
@@ -302,6 +297,59 @@ section .earnings { color:var(--muted); }
   border:1px solid rgba(14,20,24,0.04);
   cursor:pointer;
 }
-@media (max-width: 800px){
-  .modal-card{ max-width: 94%; padding:14px; }
+
+/* Responsive tweaks */
+@media (max-width: 1000px){
+  .dashboard-container{ padding:18px; }
+  .property-tile-grid{ gap:14px; }
+  :root{ --tile-img-height:78px; }
+}
+
+@media (max-width: 600px){
+  .dashboard-header{ flex-direction:column; align-items:flex-start; gap:8px; }
+  .dashboard-container::before, .dashboard-container::after{ display:none; }
+  .property-tile-grid{ grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; grid-auto-rows: var(--tile-height); }
+  :root{ --tile-width:160px; --tile-height:170px; --tile-img-height:72px; }
+}
+
+
+/* Summary section styles */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 8px;
+  align-items: stretch;
+}
+
+.summary-card {
+  background: linear-gradient(180deg,#ffffff 0%, #fffaf4 100%);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 26px rgba(16,24,32,0.06);
+  border: 1px solid rgba(14,20,24,0.03);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:flex-start;
+  min-height:84px;
+}
+
+.summary-card-title {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-bottom:6px;
+  font-weight:700;
+}
+
+.summary-card-value {
+  font-size: 1.6rem;
+  font-weight:800;
+  color: var(--hive-dark);
+  margin-bottom:4px;
+}
+
+.summary-card-sub {
+  font-size: 0.88rem;
+  color: #6b7a7a;
 }
