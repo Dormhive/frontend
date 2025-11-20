@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Dashboard.css';
+import MyBills from './TenantComponents/MyBills.js';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -34,7 +35,6 @@ export default function TenantDashboard() {
 
   // Bills / utilities UI
   const [showBills, setShowBills] = useState(false);
-  const [showUtilities, setShowUtilities] = useState(false);
 
   // Ticket UI
   const [showTicketForm, setShowTicketForm] = useState(false);
@@ -265,45 +265,14 @@ export default function TenantDashboard() {
                   {showBills ? 'Hide My Bills' : 'My Bills'}
                 </button>
               </div>
-
-              {/* Bills panel */}
-              {showBills && (
-                <div style={{ marginTop: 12, padding: 12, background: '#fff', border: '1px solid #eee', borderRadius: 6 }}>
-                  <div style={{ marginBottom: 8 }}>
-                    <strong>Rent Due:</strong> {amountDue}
-                  </div>
-                  <div style={{ marginBottom: 8 }}>
-                    <strong>Schedule of Payment:</strong> {getScheduleLabel(paymentSchedule)}
-                  </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <strong>Next Due Date:</strong> {getNextDueDate(paymentSchedule)}
-                  </div>
-
-                  {/* Utility Bills button */}
-                  <div style={{ marginTop: 8 }}>
-                    <button
-                      className="submit-btn"
-                      onClick={() => setShowUtilities((s) => !s)}
-                      type="button"
-                    >
-                      {showUtilities ? 'Hide Utility Bills' : 'Utility Bills'}
-                    </button>
-                  </div>
-
-                  {/* Utility bills panel (placeholder) */}
-                  {showUtilities && (
-                    <div style={{ marginTop: 10, padding: 10, background: '#fafafa', border: '1px dashed #eee', borderRadius: 6 }}>
-                      <div style={{ marginBottom: 8 }}>
-                        <strong>Utilities:</strong>
-                      </div>
-                      <div style={{ fontSize: 14, color: '#444' }}>
-                        No utility bills available yet.
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
+{showBills && (
+  <MyBills
+    amountDue={amountDue}
+    paymentSchedule={paymentSchedule}
+    getScheduleLabel={getScheduleLabel}
+    getNextDueDate={getNextDueDate}
+  />
+)}
               {/* Submit Ticket section */}
               <div style={{ marginTop: 18 }}>
                 <button
