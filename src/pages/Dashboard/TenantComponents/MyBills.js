@@ -1,44 +1,117 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 const API_URL = 'http://localhost:3001/api';
 
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
 export default function MyBills({ amountDue, paymentSchedule, getScheduleLabel, getNextDueDate }) {
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
-
-  // payment form states
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [paymentType, setPaymentType] = useState(null); // 'rent' | 'utility'
+  const [paymentType, setPaymentType] = useState(null); // 'rent'|'utility'
   const [manualAmount, setManualAmount] = useState('');
   const [receiptFile, setReceiptFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  const [bills, setBills] = useState([]);
+  const [loadingBills, setLoadingBills] = useState(false);
+
+  const parseAmountDue = (str) => {
+    if (!str) return '';
+    const n = parseFloat(String(str).replace(/[^0-9.-]+/g, ''));
+    return Number.isFinite(n) ? String(n) : '';
+  };
+
+  const getValidToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return { ok: false, reason: 'missing' };
+    const payload = parseJwt(token);
+    if (!payload) return { ok: false, reason: 'invalid' };
+    if (payload.exp && Date.now() >= payload.exp * 1000) return { ok: false, reason: 'expired' };
+    return { ok: true, token };
+  };
+
+  const fetchBills = async () => {
+    setLoadingBills(true);
+    setErrorMsg('');
+    try {
+      const { ok, token, reason } = getValidToken();
+      if (!ok) {
+        if (reason === 'missing') setErrorMsg('Not authenticated — please sign in.');
+        else if (reason === 'expired') setErrorMsg('Session expired — please sign in again.');
+        else setErrorMsg('Invalid session token.');
+        setBills([]);
+        return;
+      }
+
+      const res = await axios.get(`${API_URL}/bills`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setBills(res.data?.bills || []);
+    } catch (err) {
+      console.error('Failed fetching bills:', err);
+      setErrorMsg(err.response?.data?.message || 'Could not load your payments.');
+      setBills([]);
+    } finally {
+      setLoadingBills(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBills();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const openPaymentForm = (type) => {
     setPaymentType(type);
     setShowPaymentOptions(false);
-    setShowPaymentForm(true);
-    setManualAmount('');
+    const noBills = !bills || bills.length === 0;
+    if (type === 'rent' && noBills) {
+      setManualAmount(parseAmountDue(amountDue));
+    } else {
+      setManualAmount('');
+    }
     setReceiptFile(null);
+    setShowPaymentForm(true);
     setSuccessMsg('');
     setErrorMsg('');
   };
 
-  const handleFileChange = (e) => {
-    setReceiptFile(e.target.files?.[0] || null);
-  };
+  const handleFileChange = (e) => setReceiptFile(e.target.files?.[0] || null);
 
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
 
+    const { ok, token, reason } = getValidToken();
+    if (!ok) {
+      if (reason === 'missing') setErrorMsg('Not authenticated — please sign in.');
+      else if (reason === 'expired') setErrorMsg('Session expired — please sign in again.');
+      else setErrorMsg('Invalid session token.');
+      return;
+    }
+
     if (!manualAmount && !receiptFile) {
       setErrorMsg('Please provide an amount and/or upload a receipt.');
       return;
     }
-
     const amountVal = manualAmount ? Number(manualAmount) : null;
     if (manualAmount && (isNaN(amountVal) || amountVal <= 0)) {
       setErrorMsg('Please enter a valid amount.');
@@ -47,25 +120,23 @@ export default function MyBills({ amountDue, paymentSchedule, getScheduleLabel, 
 
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
       const form = new FormData();
       if (manualAmount) form.append('amount', manualAmount);
       form.append('type', paymentType === 'rent' ? 'rent' : 'utility');
       if (receiptFile) form.append('receipt', receiptFile);
 
-      // backend should derive tenant from token; adjust endpoint if your API differs
-      const res = await axios.post(`${API_URL}/bills`, form, {
+      await axios.post(`${API_URL}/bills`, form, {
         headers: {
-          Authorization: token ? `Bearer ${token}` : undefined,
-          // Note: axios will set correct multipart boundary for FormData automatically
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      setSuccessMsg(res.data?.message || 'Payment record submitted. Owner will verify receipt.');
+      setSuccessMsg('Payment submitted. Verification pending.');
       setShowPaymentForm(false);
+      await fetchBills();
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Failed to submit payment. Try again.');
       console.error('Payment submit error:', err);
+      setErrorMsg(err.response?.data?.message || 'Failed to submit payment. Try again.');
     } finally {
       setSubmitting(false);
     }
@@ -84,11 +155,7 @@ export default function MyBills({ amountDue, paymentSchedule, getScheduleLabel, 
       </div>
 
       <div style={{ marginTop: 8 }}>
-        <button
-          className="submit-btn"
-          onClick={() => setShowPaymentOptions((s) => !s)}
-          type="button"
-        >
+        <button className="submit-btn" onClick={() => setShowPaymentOptions((s) => !s)} type="button">
           Proceed to Payment
         </button>
       </div>
@@ -151,6 +218,27 @@ export default function MyBills({ amountDue, paymentSchedule, getScheduleLabel, 
           </div>
         </form>
       )}
+
+      <div style={{ marginTop: 16 }}>
+        <h4>Submitted Payments</h4>
+        {loadingBills ? (
+          <div style={{ fontStyle: 'italic' }}>Loading payments...</div>
+        ) : bills.length === 0 ? (
+          <div style={{ color: '#666' }}>No submitted payments yet.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {bills.map((b) => (
+              <div key={b.id} style={{ padding: 8, borderRadius: 6, border: '1px solid #eee', background: '#fafafa' }}>
+                <div><strong>Type:</strong> {b.type}</div>
+                <div><strong>Amount:</strong> ${Number(b.amount || 0).toFixed(2)}</div>
+                <div><strong>Status:</strong> {b.status}</div>
+                <div><strong>Verification:</strong> {b.verification}</div>
+                <div style={{ fontSize: 12, color: '#666' }}>{new Date(b.created_at).toLocaleString()}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
