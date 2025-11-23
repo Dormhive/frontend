@@ -9,7 +9,6 @@ import icon4 from '../../assets/top-icons/td4.png';
 // Page components
 import OverviewPage from './TenantPages/Overview';
 import MyBillsPage from './TenantPages/MyBills';
-import PaymentHistoryPage from './TenantPages/PaymentHistory';
 import InvoicePage from './TenantPages/Invoice';
 import SubmitTicketPage from './TenantPages/Tickets';
 
@@ -60,7 +59,6 @@ export default function TenantDashboard() {
   const tabs = [
     { key: 'Overview', label: 'Overview', icon: icon1 },
     { key: 'My Bills', label: 'My Bills', icon: icon2 },
-    { key: 'Payment History', label: 'Payment History', icon: icon3 },
     { key: 'Invoice', label: 'Invoice', icon: icon4 },
     { key: 'Submit Ticket', label: 'Submit Ticket', icon: icon1 },
   ];
@@ -232,30 +230,18 @@ export default function TenantDashboard() {
         />
       );
       break;
-    case 'Payment History':
-      PageComponent = <PaymentHistoryPage />;
-      break;
     case 'Invoice':
       PageComponent = <InvoicePage />;
       break;
-    case 'Submit Ticket':
-      PageComponent = (
-        <SubmitTicketPage
-          ticketText={ticketText}
-          setTicketText={setTicketText}
-          ticketError={ticketError}
-          ticketSuccess={ticketSuccess}
-          ticketSubmitting={ticketSubmitting}
-          handleSubmitTicket={handleSubmitTicket}
-          handleCancel={() => {
-            setShowTicketForm(false);
-            setTicketText('');
-            setTicketError(null);
-            setTicketSuccess(null);
-            setActiveTab('Overview');
-          }}
-        />
-      );
+      case 'Submit Ticket':
+          PageComponent = (
+            <SubmitTicketPage
+              tenantid={userId}
+              ownerid={owner?.id}
+              propertyid={property?.id}
+              roomid={room?.id}
+            />
+          );
       break;
     default:
       PageComponent = null;

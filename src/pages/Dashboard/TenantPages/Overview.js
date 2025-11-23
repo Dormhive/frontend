@@ -22,6 +22,14 @@ export default function OverviewPage({ loading, error, room, owner, property }) 
             {room ? `${room.owner_firstName || (owner && owner.firstName) || 'N/A'} ${room.owner_lastName || (owner && owner.lastName) || ''}`.trim() : 'N/A'}
           </div>
           <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #eee' }}>
+            <span style={{ fontWeight: 600 }}>Owner ID:</span> {' '}
+            {owner ? owner.id : 'N/A'}
+          </div>
+          <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #eee' }}>
+            <span style={{ fontWeight: 600 }}>Property ID:</span>{' '}
+            {property ? property.id : 'N/A'}
+          </div>
+          <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #eee' }}>
             <span style={{ fontWeight: 600 }}>Property:</span>{' '}
             {property ? property.propertyName : 'N/A'}
           </div>
