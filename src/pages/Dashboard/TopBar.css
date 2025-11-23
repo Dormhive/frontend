@@ -1,0 +1,246 @@
+:root{
+  --honey-50: #fffdf7;
+  --honey-100: #fff8e6;
+  --honey-200: #f9e6b8;
+  --honey-300: #f5c148;
+  --honey-400: #d49a00;
+  --hive-dark: #1b1b1b;
+  --muted: #6b6b6b;
+  --accent-shadow: rgba(212,154,0,0.14);
+  --topbar-height: 104px;
+  --hive-accent-1: #f9de7a;
+  --hive-accent-2: #f0b93a;
+  --hive-accent-3: #d49a00;
+  font-size: 20px;
+}
+
+/* Make topbar fixed, full-width and visually concatenated with page */
+.dh-topbar{
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: var(--topbar-height);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 40px;
+  margin: 0;
+  background: linear-gradient(180deg, rgba(245,193,72,0.03), rgba(210,154,0,0.01)), var(--honey-50);
+  border-bottom: 1px solid rgba(27,27,27,0.06);
+  border-radius: 0;
+  box-shadow: none;
+  z-index: 1000;
+  backdrop-filter: none;
+}
+
+/* Remove decorative overlay so topbar looks part of the page */
+.dh-topbar::before{
+  content: "";
+  display: none;
+}
+
+/* Ensure page content is pushed down so it isn't hidden under the fixed bar */
+html, body{
+  box-sizing: border-box;
+}
+body{
+  padding-top: var(--topbar-height);
+}
+
+/* Brand */
+.dh-brand{
+  display:flex;
+  align-items:center;
+  gap: 18px;
+  flex: 0 0 auto;
+}
+
+/* Logo sizing - bigger and reliable */
+.dh-logo{
+  width: 88px !important;
+  height: 88px !important;
+  min-width: 88px !important;
+  min-height: 88px !important;
+  flex: 0 0 88px !important;
+  display:block !important;
+  object-fit: contain !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-radius: 6px;
+}
+
+/* Brand title */
+.dh-brand-title{
+  font-weight: 800;
+  color: var(--hive-dark);
+  font-size: 1.25rem;
+}
+
+/* Nav centered in remaining space */
+.dh-nav{
+  display:flex;
+  gap:14px;
+  align-items:center;
+  flex:1;
+  justify-content:center;
+  max-width: 1300px;
+  padding: 0 12px;
+}
+.dh-nav-btn{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--hive-dark);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  box-shadow: 0 2px 6px rgba(27,27,27,0.04);
+}
+.dh-nav-btn:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(212,154,0,0.08);
+}
+.dh-nav-icon{
+  width:44px;
+  height:44px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background: linear-gradient(180deg, var(--honey-300), var(--honey-400));
+  color: #fff; border-radius:8px;
+  font-size: 1.1rem;
+}
+.dh-nav-btn.active{
+  background: linear-gradient(90deg, var(--honey-300), #f3af2b);
+  box-shadow: 0 10px 30px rgba(244,172,40,0.12);
+}
+
+/* image rule for finance nav item (larger) */
+.dh-nav-icon-img{
+  width:44px;
+  height:44px;
+  object-fit: contain;
+  display:inline-block;
+  border-radius:8px;
+  background: transparent;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+/* Actions - Hive-styled Logout button */
+.dh-actions{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex:0 0 auto;
+}
+
+/* Hive-rectangle button with image badge */
+.submit-btn{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 20px 12px 92px; /* increased left space for larger badge */
+  border-radius: 14px; /* rectangular rounded hive */
+  border: 1px solid rgba(0,0,0,0.06);
+  background: linear-gradient(180deg, #f7d87a 0%, #f0b93a 45%, #d49a00 100%);
+  color: var(--hive-dark);
+  font-weight: 900;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow:
+    0 8px 18px rgba(212,154,0,0.12),
+    inset 0 -4px 0 rgba(0,0,0,0.06);
+  transition: transform .14s ease, box-shadow .14s ease, filter .14s ease;
+  overflow: visible;
+}
+
+/* Hex/Badge element left of the button that will contain the provided image */
+.hex-badge{
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 56px;
+  height: 56px;
+
+  /* Remove orange background / shape so the provided image shows as-is */
+  background: transparent;
+  clip-path: none;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* Image inside the badge uses user-provided file (bigger) */
+.hex-badge-img{
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  display: block;
+  transform: none;
+  background: transparent;
+  border-radius: 4px;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.25);
+}
+
+/* remove pseudo bee/icon rules (if present elsewhere) */
+/* Hover / active */
+.submit-btn:hover{
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 28px rgba(212,154,0,0.16),
+    inset 0 -4px 0 rgba(0,0,0,0.06);
+  filter: saturate(1.03);
+}
+.submit-btn:active{
+  transform: translateY(0);
+  box-shadow: 0 6px 14px rgba(212,154,0,0.12), inset 0 -2px 0 rgba(0,0,0,0.04);
+}
+
+/* Focus ring for accessibility */
+.submit-btn:focus{
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(245,193,72,0.14), 0 8px 18px rgba(212,154,0,0.12);
+}
+
+/* Small screens: reduce sizes proportionally */
+@media (max-width: 880px){
+  .dh-nav{ display:none; }
+  .dh-logo{
+    width:56px !important;
+    height:56px !important;
+    min-width:56px !important;
+    min-height:56px !important;
+    flex:0 0 56px !important;
+  }
+  body{ padding-top: 72px; }
+  .submit-btn{
+    padding:10px 14px 10px 86px;
+    border-radius:12px;
+    font-size:0.95rem;
+  }
+  .hex-badge{
+    width:42px; height:42px; left: 10px;
+  }
+  .hex-badge-img{ width:34px; height:34px; }
+  .dh-nav-icon, .dh-nav-icon-img{
+    width:32px;
+    height:32px;
+  }
+}
+
+/* smoothing */
+body .dh-topbar, .dh-topbar *{ -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
