@@ -1,23 +1,30 @@
 import React from 'react';
-import './Dashboard.css';
+import brandLogo from './images/Logo.png';
+import logoutImg from './images/Log.png';
+import financeImg from './images/finance.png';
+import overviewImg from './images/overviewtab.png'; // Import the new image for Overview
+import propertiesImg from './images/properties.png'; // Import the new image for Properties
+import tenantsImg from './images/tenants.png'; // Import the new image for Tenants
+import concernImg from './images/concern.png'; // Import the new image for Concerns
+import './TopBar.css';
 
 export default function TopBar({ active = 'overview', onSelect = () => {} }) {
   const items = [
-    { id: 'overview', label: 'Overview', icon: '🏠' },
-    { id: 'properties', label: 'Properties', icon: '🏘️' },
-    { id: 'tenants', label: 'Tenants', icon: '👥' },
-    { id: 'finance', label: 'Finance', icon: '💳' },
-    { id: 'concerns', label: 'Concerns', icon: '❗' },
+    { id: 'overview', label: 'Overview', icon: overviewImg }, // Use the new image for Overview
+    { id: 'properties', label: 'Properties', icon: propertiesImg }, // Use the new image for Properties
+    { id: 'tenants', label: 'Tenants', icon: tenantsImg }, // Use the new image for Tenants
+    { id: 'finance', label: 'Finance', icon: financeImg },
+    { id: 'concerns', label: 'Concerns', icon: concernImg }, // Use the new image for Concerns
   ];
 
   return (
     <header className="dh-topbar" role="navigation" aria-label="Dashboard navigation">
       <div className="dh-brand">
-        <img src="/assets/logo.png" alt="DormHive" onError={(e) => { e.target.style.display = 'none'; }} />
+        <img className="dh-logo" src={brandLogo} alt="DormHive" />
         <span className="dh-brand-title">DormHive</span>
       </div>
 
-      <nav className="dh-nav">
+      <nav className="dh-nav" role="tablist" aria-label="Main sections">
         {items.map((it) => (
           <button
             key={it.id}
@@ -26,8 +33,22 @@ export default function TopBar({ active = 'overview', onSelect = () => {} }) {
             aria-pressed={active === it.id}
             aria-label={it.label}
             title={it.label}
+            role="tab"
+            aria-selected={active === it.id}
           >
-            <span className="dh-nav-icon" aria-hidden>{it.icon}</span>
+            {it.id === 'overview' ? (
+              <img src={overviewImg} alt="" className="dh-nav-icon-img" aria-hidden="true" />
+            ) : it.id === 'properties' ? (
+              <img src={propertiesImg} alt="" className="dh-nav-icon-img" aria-hidden="true" />
+            ) : it.id === 'tenants' ? (
+              <img src={tenantsImg} alt="" className="dh-nav-icon-img" aria-hidden="true" />
+            ) : it.id === 'finance' ? (
+              <img src={financeImg} alt="" className="dh-nav-icon-img" aria-hidden="true" />
+            ) : it.id === 'concerns' ? (
+              <img src={concernImg} alt="" className="dh-nav-icon-img" aria-hidden="true" />
+            ) : (
+              <span className="dh-nav-icon" aria-hidden="true">{it.icon}</span>
+            )}
             <span className="dh-nav-label">{it.label}</span>
           </button>
         ))}
@@ -42,7 +63,11 @@ export default function TopBar({ active = 'overview', onSelect = () => {} }) {
             localStorage.removeItem('userRole');
             window.location.href = '/';
           }}
+          aria-label="Logout"
         >
+          <span className="hex-badge" aria-hidden="true">
+            <img src={logoutImg} alt="" className="hex-badge-img" />
+          </span>
           Logout
         </button>
       </div>
