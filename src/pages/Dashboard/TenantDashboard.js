@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './TenantDashboard.css';
+import './TenantComponents/tenantTopBar.css';
 import icon1 from '../../assets/top-icons/td1.png';
 import icon2 from '../../assets/top-icons/td2.png';
 import icon3 from '../../assets/top-icons/td3.png';
 import icon4 from '../../assets/top-icons/td4.png';
+import logoImg from './images/Logo.png'; // <-- Import the DormHive logo
 
 // Page components
-import OverviewPage from './TenantPages/Overview';
+import OverviewPage from './TenantPages/tenantOverview';
 import MyBillsPage from './TenantPages/MyBills';
 import InvoicePage from './TenantPages/Invoice';
 import SubmitTicketPage from './TenantPages/Tickets';
@@ -56,12 +58,12 @@ export default function TenantDashboard() {
   const [ticketError, setTicketError] = useState(null);
   const [ticketSuccess, setTicketSuccess] = useState(null);
 
-  const tabs = [
-    { key: 'Overview', label: 'Overview', icon: icon1 },
-    { key: 'My Bills', label: 'My Bills', icon: icon2 },
-    { key: 'Invoice', label: 'Invoice', icon: icon4 },
-    { key: 'Submit Ticket', label: 'Submit Ticket', icon: icon1 },
-  ];
+ const tabs = [
+  { key: 'Overview', label: 'Overview', icon: icon1 },
+  { key: 'Rent', label: 'Rent', icon: icon2 },
+  { key: 'Utility', label: 'Utility', icon: icon4 },
+  { key: 'Submit Ticket', label: 'Submit Ticket', icon: icon1 },
+];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -247,10 +249,15 @@ export default function TenantDashboard() {
       PageComponent = null;
   }
 
-  return (
+   return (
     <div className="dashboard-container">
       <div className="dashboard-topbar">
         <div className="brand-left">
+          <img
+            src={logoImg}
+            alt="DormHive Logo"
+            className="brand-logo"
+          />
           <div className="brand-title">DormHive</div>
         </div>
         <div className="topbar-tabs" role="tablist" aria-label="Dashboard tabs">
@@ -258,10 +265,10 @@ export default function TenantDashboard() {
             <button
               key={t.key}
               type="button"
-              className={`tab ${activeTab === t.key ? 'active' : ''}`}
-              onClick={() => onTabClick(t.key)}
+              className={`tab${activeTab === t.key ? ' active' : ''}`}
+              onClick={() => setActiveTab(t.key)}
             >
-              {t.icon && <img src={t.icon} alt={`${t.label} icon`} className="tab-icon" />}
+              {t.icon && <img src={t.icon} alt="" className="tab-icon" />}
               <span className="tab-label">{t.label}</span>
             </button>
           ))}

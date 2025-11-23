@@ -29,26 +29,12 @@ export default function TopBar({ active = 'overview', onSelect = () => {} }) {
           <button
             key={it.id}
             className={`dh-nav-btn${active === it.id ? ' active' : ''}`}
-            onClick={() => onSelect(it.id)}
-            aria-pressed={active === it.id}
-            aria-label={it.label}
-            title={it.label}
             role="tab"
             aria-selected={active === it.id}
+            tabIndex={active === it.id ? 0 : -1}
+            onClick={() => onSelect(it.id)}
           >
-            {it.id === 'overview' ? (
-              <img src={overviewImg} alt="" className="dh-nav-icon-img" aria-hidden="true" />
-            ) : it.id === 'properties' ? (
-              <img src={propertiesImg} alt="" className="dh-nav-icon-img" aria-hidden="true" />
-            ) : it.id === 'tenants' ? (
-              <img src={tenantsImg} alt="" className="dh-nav-icon-img" aria-hidden="true" />
-            ) : it.id === 'finance' ? (
-              <img src={financeImg} alt="" className="dh-nav-icon-img" aria-hidden="true" />
-            ) : it.id === 'concerns' ? (
-              <img src={concernImg} alt="" className="dh-nav-icon-img" aria-hidden="true" />
-            ) : (
-              <span className="dh-nav-icon" aria-hidden="true">{it.icon}</span>
-            )}
+            <img src={it.icon} alt="" className="dh-nav-icon-img" aria-hidden="true" />
             <span className="dh-nav-label">{it.label}</span>
           </button>
         ))}
