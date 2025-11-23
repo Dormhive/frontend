@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import '../TenantPages/MyBills.css';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -22,7 +23,7 @@ function parseJwt(token) {
 export default function MyBills({ amountDue, paymentSchedule, getScheduleLabel, getNextDueDate }) {
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [paymentType, setPaymentType] = useState(null); // 'rent'|'utility'
+  const [paymentType, setPaymentType] = useState(null);
   const [manualAmount, setManualAmount] = useState('');
   const [receiptFile, setReceiptFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -31,6 +32,10 @@ export default function MyBills({ amountDue, paymentSchedule, getScheduleLabel, 
 
   const [bills, setBills] = useState([]);
   const [loadingBills, setLoadingBills] = useState(false);
+
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [popupSrc, setPopupSrc] = useState('');
+  const [zoom, setZoom] = useState(1);
 
   const parseAmountDue = (str) => {
     if (!str) return '';
@@ -142,28 +147,49 @@ export default function MyBills({ amountDue, paymentSchedule, getScheduleLabel, 
     }
   };
 
+  const handleViewReceipt = (receipt) => {
+    setPopupSrc(`http://localhost:3001/uploads/${receipt}`);
+    setZoom(1);
+    setPopupOpen(true);
+  };
+
+  const handleClosePopup = () => {
+    setPopupOpen(false);
+    setPopupSrc('');
+    setZoom(1);
+  };
+
+  const handleZoomIn = () => setZoom((z) => Math.min(z + 0.25, 3));
+  const handleZoomOut = () => setZoom((z) => Math.max(z - 0.25, 0.5));
+
   return (
-    <div style={{ marginTop: 12, padding: 12, background: '#fff', border: '1px solid #eee', borderRadius: 6 }}>
-      <div style={{ marginBottom: 8 }}>
+    <div className="mybills-container">
+      <div className="mybills-section">
         <strong>Rent Due:</strong> {amountDue}
       </div>
-      <div style={{ marginBottom: 8 }}>
+      <div className="mybills-section">
         <strong>Schedule of Payment:</strong> {getScheduleLabel(paymentSchedule)}
       </div>
-      <div style={{ marginBottom: 12 }}>
+      <div className="mybills-section">
         <strong>Next Due Date:</strong> {getNextDueDate(paymentSchedule)}
       </div>
 
-      <div style={{ marginTop: 8 }}>
+      <div className="mybills-btn-row">
         <button className="submit-btn" onClick={() => setShowPaymentOptions((s) => !s)} type="button">
           Proceed to Payment
         </button>
       </div>
 
+      {successMsg && (
+        <div className="mybills-success">
+          {successMsg}
+        </div>
+      )}
+
       {showPaymentOptions && (
-        <div style={{ marginTop: 12, padding: 12, background: '#f9f9ff', border: '1px solid #e6e6ff', borderRadius: 6 }}>
-          <div style={{ marginBottom: 8, fontWeight: 600 }}>Kindly choose the payment category:</div>
-          <div style={{ display: 'flex', gap: 8 }}>
+        <div className="mybills-options">
+          <div className="mybills-options-title">Kindly choose the payment category:</div>
+          <div className="mybills-btn-row">
             <button type="button" className="submit-btn" onClick={() => openPaymentForm('rent')}>Rent</button>
             <button type="button" className="submit-btn" onClick={() => openPaymentForm('utility')}>Utility Bills</button>
           </div>
@@ -171,13 +197,13 @@ export default function MyBills({ amountDue, paymentSchedule, getScheduleLabel, 
       )}
 
       {showPaymentForm && (
-        <form onSubmit={handleSubmitPayment} style={{ marginTop: 12, padding: 12, background: '#fff', border: '1px solid #eee', borderRadius: 6 }}>
-          <div style={{ marginBottom: 8 }}>
+        <form onSubmit={handleSubmitPayment} className="mybills-form">
+          <div className="mybills-form-row">
             <strong>Payment Type:</strong> {paymentType === 'rent' ? 'Rent' : 'Utility Bills'}
           </div>
 
-          <div style={{ marginBottom: 8 }}>
-            <label style={{ display: 'block', marginBottom: 6 }}>Amount (optional if uploading receipt)</label>
+          <div className="mybills-form-row">
+            <label className="mybills-label">Amount (optional if uploading receipt)</label>
             <input
               type="number"
               step="0.01"
@@ -185,20 +211,19 @@ export default function MyBills({ amountDue, paymentSchedule, getScheduleLabel, 
               placeholder="Enter amount paid"
               value={manualAmount}
               onChange={(e) => setManualAmount(e.target.value)}
-              style={{ padding: 8, width: '100%', boxSizing: 'border-box' }}
+              className="mybills-input"
             />
           </div>
 
-          <div style={{ marginBottom: 8 }}>
-            <label style={{ display: 'block', marginBottom: 6 }}>Upload receipt (image or PDF)</label>
-            <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
-            {receiptFile && <div style={{ marginTop: 6, fontSize: 13 }}>{receiptFile.name}</div>}
+          <div className="mybills-form-row">
+            <label className="mybills-label">Upload receipt (image or PDF)</label>
+            <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="mybills-input" />
+            {receiptFile && <div className="mybills-file">{receiptFile.name}</div>}
           </div>
 
-          {errorMsg && <div style={{ color: '#c33', marginBottom: 8 }}>{errorMsg}</div>}
-          {successMsg && <div style={{ color: '#188a00', marginBottom: 8 }}>{successMsg}</div>}
+          {errorMsg && <div className="mybills-error">{errorMsg}</div>}
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="mybills-btn-row">
             <button className="submit-btn" type="submit" disabled={submitting}>
               {submitting ? 'Submitting...' : 'Submit Payment'}
             </button>
@@ -219,26 +244,67 @@ export default function MyBills({ amountDue, paymentSchedule, getScheduleLabel, 
         </form>
       )}
 
-      <div style={{ marginTop: 16 }}>
-        <h4>Submitted Payments</h4>
+      <div className="mybills-history">
+        <h4>Payment History</h4>
         {loadingBills ? (
-          <div style={{ fontStyle: 'italic' }}>Loading payments...</div>
+          <div className="mybills-loading">Loading payments...</div>
         ) : bills.length === 0 ? (
-          <div style={{ color: '#666' }}>No submitted payments yet.</div>
+          <div className="mybills-empty">No submitted payments yet.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="mybills-history-list">
             {bills.map((b) => (
-              <div key={b.id} style={{ padding: 8, borderRadius: 6, border: '1px solid #eee', background: '#fafafa' }}>
+              <div key={b.id} className="mybills-history-item">
                 <div><strong>Type:</strong> {b.type}</div>
                 <div><strong>Amount:</strong> ${Number(b.amount || 0).toFixed(2)}</div>
                 <div><strong>Status:</strong> {b.status}</div>
                 <div><strong>Verification:</strong> {b.verification}</div>
-                <div style={{ fontSize: 12, color: '#666' }}>{new Date(b.created_at).toLocaleString()}</div>
+                <div>
+                  <strong>Receipt:</strong>{' '}
+                  {b.receipt ? (
+                    <button
+                      type="button"
+                      className="mybills-view-btn"
+                      onClick={() => handleViewReceipt(b.receipt)}
+                    >
+                      View
+                    </button>
+                  ) : (
+                    'N/A'
+                  )}
+                </div>
+                <div className="mybills-date">{new Date(b.created_at).toLocaleString()}</div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {popupOpen && (
+        <div className="mybills-popup-overlay" onClick={handleClosePopup}>
+          <div className="mybills-popup" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={popupSrc}
+              alt="Receipt"
+              className="mybills-popup-img"
+              style={{
+                transform: `scale(${zoom})`,
+                transition: 'transform 0.2s',
+              }}
+            />
+            <div className="mybills-popup-zoom">
+              <button onClick={handleZoomOut}>-</button>
+              <span>{Math.round(zoom * 100)}%</span>
+              <button onClick={handleZoomIn}>+</button>
+            </div>
+            <button
+              onClick={handleClosePopup}
+              className="mybills-popup-close"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
