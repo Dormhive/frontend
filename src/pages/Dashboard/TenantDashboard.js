@@ -10,7 +10,7 @@ import logoImg from './images/Logo.png'; // <-- Import the DormHive logo
 
 // Page components
 import OverviewPage from './TenantPages/tenantOverview';
-import MyBillsPage from './TenantPages/MyBills';
+import Rent from './TenantPages/Rent';
 import InvoicePage from './TenantPages/Invoice';
 import SubmitTicketPage from './TenantPages/Tickets';
 
@@ -222,9 +222,9 @@ export default function TenantDashboard() {
         />
       );
       break;
-    case 'My Bills':
+    case 'Rent':
       PageComponent = (
-        <MyBillsPage
+        <Rent
           amountDue={amountDue}
           paymentSchedule={paymentSchedule}
           getScheduleLabel={getScheduleLabel}

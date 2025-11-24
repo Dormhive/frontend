@@ -4,7 +4,7 @@ import TopBar from './TopBar';
 import Overview from './Overview';
 import PropertiesPage from './Properties';
 import TenantsPage from './Tenants';
-import Finance from './Finance';
+import Finance from './Finance.js';
 import Concerns from './Concerns';
 
 /**

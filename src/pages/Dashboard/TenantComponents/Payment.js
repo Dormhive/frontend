@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import '../TenantPages/MyBills.css';
+import '../TenantPages/Rent.css';
 
 const API_URL = 'http://localhost:3001/api';
 

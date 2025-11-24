@@ -26,26 +26,35 @@ function Signup() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setMessage('');
+  e.preventDefault();
+  setError('');
+  setMessage('');
 
-    if (formData.password !== formData.confirmPassword) {
-      return setError('Passwords do not match.');
-    }
-    if (!agreedToTerms) {
-      return setError('You must agree to the Terms and Conditions.');
-    }
+  // Validate fields
+  if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
+    setError('Please fill in all fields.');
+    return;
+  }
+  if (formData.password !== formData.confirmPassword) {
+    setError('Passwords do not match.');
+    return;
+  }
+  if (!agreedToTerms) {
+    setError('You must agree to the Terms and Conditions.');
+    return;
+  }
 
-    try {
-      const payload = { ...formData, role };
-      const response = await axios.post(`${API_URL}/signup`, payload);
-      setMessage(response.data.message);
-      setTimeout(() => navigate('/login'), 2000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred during signup.');
-    }
-  };
+  try {
+    const payload = { ...formData, role };
+    const response = await axios.post(`${API_URL}/signup`, payload);
+    setMessage(response.data.message);
+    setTimeout(() => navigate('/welcome'), 2000);
+  } catch (err) {
+    // Show backend error in console for debugging
+    console.log('Signup error:', err.response?.data || err.message);
+    setError(err.response?.data?.message || 'An error occurred during signup.');
+  }
+};
 
   return (
     <div className="signup-page">

@@ -93,6 +93,14 @@
   height: 38px;
 }
 
+/* Tenant dashboard background */
+body, .tenant-dashboard-bg, .tenant-dashboard-container {
+  background: 
+    url('https://i.pinimg.com/1200x/d0/fe/f3/d0fef3da575645643c2e706cb9dbbb54.jpg') repeat,
+    linear-gradient(180deg,#fbfdfe 0%, #f2f6f7 100%);
+  background-size: 340px, auto;
+}
+
 /* responsive */
 @media (max-width: 860px) {
   .dashboard-topbar {
