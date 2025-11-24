@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import PropertyHexGrid from './OwnerComponents/PropertyHexGrid';
 import AddPropertyForm from './OwnerComponents/AddPropertyForm';
+import PropertyHexGrid from './OwnerComponents/PropertyHexGrid';
 import PropertyDetails from './OwnerComponents/PropertyDetails';
 
 const API_URL = 'http://localhost:3001/api';
@@ -22,14 +22,12 @@ export default function PropertiesPage() {
   const [showAssignTenantForm, setShowAssignTenantForm] = useState({});
   const [tenantFormByRoom, setTenantFormByRoom] = useState({});
 
-  // NOTE: roomForm is no longer used for the Add Room inline form (RoomsTable uses local state)
   const [roomForm] = useState({
     roomNumber: '',
     type: '',
     monthlyRent: '',
     capacity: '',
     amenities: '',
-    paymentSchedule: '1st',
   });
 
   const ROOM_TYPES = [
@@ -43,11 +41,11 @@ export default function PropertiesPage() {
   const fetchAllRooms = useCallback(async (props) => {
     const token = localStorage.getItem('token');
     const roomsMap = {};
-    await Promise.all(props.map(async (p) => {
+    await Promise.all((props || []).map(async (p) => {
       try {
         const r = await axios.get(`${API_URL}/properties/${p.id}/rooms`, { headers: { Authorization: `Bearer ${token}` } });
         roomsMap[p.id] = r.data || [];
-      } catch (err) {
+      } catch {
         roomsMap[p.id] = [];
       }
     }));
@@ -60,22 +58,8 @@ export default function PropertiesPage() {
       const res = await axios.get(`${API_URL}/properties`, { headers: { Authorization: `Bearer ${token}` } });
       const props = res.data || [];
       setProperties(props);
-
-      // initialize expanded / add-room / assign-tenant state for each property
-      const initialExpanded = {};
-      const initialAddForm = {};
-      const initialAssignForm = {};
-      props.forEach((p) => {
-        initialExpanded[p.id] = false;
-        initialAddForm[p.id] = false;
-        initialAssignForm[p.id] = {}; // will hold per-room keys when used
-      });
-      setExpanded(initialExpanded);
-      setShowAddRoomForm(initialAddForm);
-      setShowAssignTenantForm(initialAssignForm);
-
       await fetchAllRooms(props);
-    } catch (err) {
+    } catch {
       setProperties([]);
       setRooms({});
     }
@@ -85,24 +69,19 @@ export default function PropertiesPage() {
 
   const handlePropertyInput = (e) => {
     const { name, value } = e.target;
-    setPropertyForm((s) => ({ ...s, [name]: value }));
+    setPropertyForm((f) => ({ ...f, [name]: value }));
   };
 
   const handleAddProperty = async (e) => {
     e.preventDefault();
-    if (!propertyForm.propertyName || !propertyForm.address) {
-      setError('Please fill property name and address.');
-      return;
-    }
     setLoading(true);
+    setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.post(`${API_URL}/properties`, propertyForm, { headers: { Authorization: `Bearer ${token}` } });
-      const newProp = res.data;
-      setProperties((p) => [...p, newProp]);
-      setRooms((r) => ({ ...r, [newProp.id]: [] }));
-      setPropertyForm({ propertyName: '', address: '', description: '' });
+      await axios.post(`${API_URL}/properties`, propertyForm, { headers: { Authorization: `Bearer ${token}` } });
       setShowAddPropertyForm(false);
+      setPropertyForm({ propertyName: '', address: '', description: '' });
+      fetchProperties();
     } catch (err) {
       setError(err.response?.data?.message || 'Error adding property');
     } finally {
@@ -110,158 +89,75 @@ export default function PropertiesPage() {
     }
   };
 
-  // update property
   const handleUpdateProperty = async (propertyId, updated) => {
+    setLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.put(`${API_URL}/properties/${propertyId}`, updated, { headers: { Authorization: `Bearer ${token}` } });
-      const updatedProp = res.data;
-      setProperties((p) => p.map((prop) => (prop.id === updatedProp.id ? updatedProp : prop)));
+      await axios.put(`${API_URL}/properties/${propertyId}`, updated, { headers: { Authorization: `Bearer ${token}` } });
+      fetchProperties();
     } catch (err) {
       setError(err.response?.data?.message || 'Error updating property');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // delete property (confirm)
   const handleDeleteProperty = async (propertyId) => {
-    const ok = window.confirm('Delete this property and all its rooms? This action cannot be undone.');
-    if (!ok) return;
+    if (!window.confirm('Are you sure you want to delete this property?')) return;
+    setLoading(true);
+    setError('');
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`${API_URL}/properties/${propertyId}`, { headers: { Authorization: `Bearer ${token}` } });
-      setProperties((p) => p.filter((prop) => prop.id !== propertyId));
-      setRooms((r) => {
-        const copy = { ...r };
-        delete copy[propertyId];
-        return copy;
-      });
-      if (selectedPropertyId === propertyId) setSelectedPropertyId(null);
+      fetchProperties();
     } catch (err) {
       setError(err.response?.data?.message || 'Error deleting property');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // --- Room / detail handlers used by PropertyDetails / RoomsTable ---
   const toggleExpand = (propertyId) => {
-    setExpanded((s) => ({ ...s, [propertyId]: !s[propertyId] }));
+    setExpanded((e) => ({ ...e, [propertyId]: !e[propertyId] }));
     setSelectedPropertyId(propertyId);
   };
 
-  // When opening Add Room ensure the property is expanded and selected so RoomsTable is mounted
   const toggleAddRoomFormFor = (propertyId) => {
-    setShowAddRoomForm((s) => {
-      const next = { ...s, [propertyId]: !s[propertyId] };
-      // if we're opening the add form, also expand property and select it
-      if (next[propertyId]) {
-        setExpanded((ex) => ({ ...ex, [propertyId]: true }));
-        setSelectedPropertyId(propertyId);
-      }
-      return next;
-    });
+    setShowAddRoomForm((s) => ({ ...s, [propertyId]: !s[propertyId] }));
+    setExpanded((e) => ({ ...e, [propertyId]: true }));
+    setSelectedPropertyId(propertyId);
   };
 
-  // Toggle per-room assign tenant form visibility
   const toggleAssignTenantFormFor = (roomId) => {
-    setShowAssignTenantForm((s) => {
-      const next = { ...(s || {}) };
-      next[roomId] = !next[roomId];
-      return next;
-    });
+    setShowAssignTenantForm((s) => ({ ...s, [roomId]: !s[roomId] }));
   };
 
-  // tenant input per room
   const handleTenantInputForRoom = (roomId, e) => {
     const { name, value } = e.target;
-    setTenantFormByRoom((s) => ({ ...(s || {}), [roomId]: { ...(s?.[roomId] || {}), [name]: value } }));
+    setTenantFormByRoom((f) => ({
+      ...f,
+      [roomId]: { ...(f[roomId] || {}), [name]: value }
+    }));
   };
 
-  // NOTE: handleAddRoomFor now accepts (propertyId, data)
-  const handleAddRoomFor = async (propertyId, data) => {
-    setError('');
-    const { roomNumber, type, monthlyRent } = data;
-    if (!roomNumber || !type || monthlyRent === '' || monthlyRent === null || monthlyRent === undefined) {
-      setError('Please fill required room fields (number, type, monthly rent).');
-      return;
-    }
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(
-        `${API_URL}/properties/${propertyId}/rooms`,
-        data,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const savedRoom = res.data;
-      setRooms((r) => {
-        const list = (r[propertyId] || []).concat(savedRoom);
-        return { ...r, [propertyId]: list };
-      });
-      setShowAddRoomForm((s) => ({ ...s, [propertyId]: false }));
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error adding room');
-    }
-  };
-
-  // update room
-  const handleUpdateRoom = async (propertyId, roomId, data) => {
-    setError('');
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.put(`${API_URL}/properties/${propertyId}/rooms/${roomId}`, data, { headers: { Authorization: `Bearer ${token}` } });
-      const updatedRoom = res.data;
-      setRooms((r) => {
-        const updated = (r[propertyId] || []).map((rm) => (rm.id === updatedRoom.id ? updatedRoom : rm));
-        return { ...r, [propertyId]: updated };
-      });
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error updating room');
-    }
-  };
-
-  // delete room (confirm)
-  const handleDeleteRoom = async (propertyId, roomId) => {
-    const ok = window.confirm('Delete this room and its tenant assignments? This action cannot be undone.');
-    if (!ok) return;
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/properties/${propertyId}/rooms/${roomId}`, { headers: { Authorization: `Bearer ${token}` } });
-      setRooms((r) => {
-        const list = (r[propertyId] || []).filter((rm) => rm.id !== roomId);
-        return { ...r, [propertyId]: list };
-      });
-      // hide assign form if open
-      setShowAssignTenantForm((s) => {
-        const next = { ...(s || {}) };
-        delete next[roomId];
-        return next;
-      });
-      setTenantFormByRoom((s) => {
-        const next = { ...(s || {}) };
-        delete next[roomId];
-        return next;
-      });
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error deleting room');
-    }
-  };
-
-  // assign tenant: read tenant email + paymentSchedule from tenantFormByRoom[roomId]
   const handleAssignTenant = async (e, roomId, propertyId) => {
     e.preventDefault();
     setError('');
     const form = tenantFormByRoom?.[roomId] || {};
     const email = (form.email || '').trim();
-    const paymentSchedule = form.paymentSchedule || undefined; // undefined => backend will fall back to room default
+    const move_in = form.move_in;
+    const paymentfrequency = move_in ? new Date(move_in).getDate() : undefined;
 
-    if (!email) {
-      setError('Please enter tenant email address.');
+    if (!email || !move_in) {
+      setError('Please enter tenant email address and move-in date.');
       return;
     }
     try {
       const token = localStorage.getItem('token');
       const res = await axios.post(
         `${API_URL}/properties/${propertyId}/rooms/${roomId}/assign-tenant`,
-        { tenantEmail: email, paymentSchedule },
+        { tenantEmail: email, move_in, paymentfrequency },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const updatedRoom = res.data;
@@ -269,83 +165,112 @@ export default function PropertiesPage() {
         const updated = (r[propertyId] || []).map((room) => (room.id === roomId ? updatedRoom : room));
         return { ...r, [propertyId]: updated };
       });
-      // clear tenant input and hide form
-      setTenantFormByRoom((s) => ({ ...(s || {}), [roomId]: { email: '', paymentSchedule: '1st' } }));
+      setTenantFormByRoom((s) => ({ ...(s || {}), [roomId]: { email: '', move_in: '' } }));
       setShowAssignTenantForm((s) => ({ ...(s || {}), [roomId]: false }));
     } catch (err) {
       setError(err.response?.data?.message || 'Error assigning tenant');
     }
   };
 
-  const handleRemoveTenant = async (roomId, tenantId, propertyId) => {
+  const handleAddRoomFor = async (propertyId, roomData, callback) => {
+    setLoading(true);
+    setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.delete(
-        `${API_URL}/properties/${propertyId}/rooms/${roomId}/tenants/${tenantId}`,
+      await axios.post(
+        `${API_URL}/properties/${propertyId}/rooms`,
+        roomData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      const updatedRoom = res.data;
-      setRooms((r) => {
-        const updated = (r[propertyId] || []).map((room) => (room.id === roomId ? updatedRoom : room));
-        return { ...r, [propertyId]: updated };
+      await fetchProperties();
+      if (callback) callback();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error adding room');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- FIX: Add these handlers for delete actions ---
+  const handleDeleteRoom = async (propertyId, roomId) => {
+    setLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/properties/${propertyId}/rooms/${roomId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      await fetchProperties();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error deleting room');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveTenant = async (roomId, tenantId, propertyId) => {
+    setLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/properties/${propertyId}/rooms/${roomId}/tenants/${tenantId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await fetchProperties();
     } catch (err) {
       setError(err.response?.data?.message || 'Error removing tenant');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="dashboard-container">
-      <div style={{ marginBottom: 8 }}>
-        <h2 style={{ margin: 0 }}>Properties</h2>
-        <p style={{ margin: 0 }}>Manage your properties, rooms and details</p>
-      </div>
-
+      <h2>Properties</h2>
       <PropertyHexGrid
         properties={properties}
         selectedPropertyId={selectedPropertyId}
-        handleSelectProperty={(id) => setSelectedPropertyId((prev) => (prev === id ? null : id))}
+        handleSelectProperty={setSelectedPropertyId}
         handleShowAddPropertyForm={() => setShowAddPropertyForm(true)}
+        onEditProperty={handleUpdateProperty}
+        onDeleteProperty={handleDeleteProperty}
       />
-
       {showAddPropertyForm && (
-        <div className="add-property-panel">
-          <AddPropertyForm
-            showAddPropertyForm={showAddPropertyForm}
-            setShowAddPropertyForm={setShowAddPropertyForm}
-            propertyForm={propertyForm}
-            handlePropertyInput={handlePropertyInput}
-            handleAddProperty={handleAddProperty}
-            loading={loading}
-            error={error}
-          />
-        </div>
+        <AddPropertyForm
+          showAddPropertyForm={showAddPropertyForm}
+          setShowAddPropertyForm={setShowAddPropertyForm}
+          propertyForm={propertyForm}
+          handlePropertyInput={handlePropertyInput}
+          handleAddProperty={handleAddProperty}
+          loading={loading}
+          error={error}
+        />
       )}
-
-      <PropertyDetails
-        selectedPropertyId={selectedPropertyId}
-        setSelectedPropertyId={setSelectedPropertyId}
-        properties={properties}
-        rooms={rooms}
-        expanded={expanded}
-        toggleExpand={toggleExpand}
-        showAddRoomForm={showAddRoomForm}
-        toggleAddRoomFormFor={toggleAddRoomFormFor}
-        roomForm={roomForm}
-        handleRoomInput={() => {}}
-        handleAddRoomFor={handleAddRoomFor}
-        ROOM_TYPES={ROOM_TYPES}
-        showAssignTenantForm={showAssignTenantForm}
-        toggleAssignTenantFormFor={toggleAssignTenantFormFor}
-        tenantFormByRoom={tenantFormByRoom}
-        handleAssignTenant={handleAssignTenant}
-        handleTenantInputForRoom={handleTenantInputForRoom}
-        handleRemoveTenant={handleRemoveTenant}
-        handleUpdateProperty={handleUpdateProperty}
-        handleDeleteProperty={handleDeleteProperty}
-        handleUpdateRoom={handleUpdateRoom}
-        handleDeleteRoom={handleDeleteRoom}
-      />
+      {selectedPropertyId && (
+        <PropertyDetails
+          selectedPropertyId={selectedPropertyId}
+          setSelectedPropertyId={setSelectedPropertyId}
+          properties={properties}
+          expanded={expanded}
+          toggleExpand={toggleExpand}
+          showAddRoomForm={showAddRoomForm}
+          toggleAddRoomFormFor={toggleAddRoomFormFor}
+          roomForm={roomForm}
+          rooms={rooms}
+          ROOM_TYPES={ROOM_TYPES}
+          showAssignTenantForm={showAssignTenantForm}
+          toggleAssignTenantFormFor={toggleAssignTenantFormFor}
+          tenantFormByRoom={tenantFormByRoom}
+          handleAssignTenant={handleAssignTenant}
+          handleTenantInputForRoom={handleTenantInputForRoom}
+          handleUpdateProperty={handleUpdateProperty}
+          handleDeleteProperty={handleDeleteProperty}
+          handleAddRoomFor={handleAddRoomFor}
+          handleRemoveTenant={handleRemoveTenant}
+          handleDeleteRoom={handleDeleteRoom}
+        />
+      )}
+      {error && <div className="form-error">{error}</div>}
     </div>
   );
 }

@@ -1,11 +1,37 @@
 import React, { useState } from 'react';
 import AssignTenantForm from './AssignTenantForm';
 
+// Helper to get ordinal suffix and superscript
+function getOrdinalSuperscript(n) {
+  if (!n) return '';
+  const num = parseInt(n, 10);
+  let suffix = 'th';
+  if (num % 100 < 11 || num % 100 > 13) {
+    switch (num % 10) {
+      case 1: suffix = 'st'; break;
+      case 2: suffix = 'nd'; break;
+      case 3: suffix = 'rd'; break;
+      default: suffix = 'th';
+    }
+  }
+  const supers = {
+    st: '\u02E2\u1D57', // ˢᵗ
+    nd: '\u207F\u1D48', // ⁿᵈ
+    rd: '\u02B3\u1D49', // ʳᵈ
+    th: '\u1D57\u02B0', // ᵗʰ
+  };
+  return (
+    <>
+      {num}
+      <sup style={{ fontSize: '0.8em' }}>{supers[suffix] || supers.th}</sup>
+    </>
+  );
+}
+
 function RoomsTable({
   prop,
-  rooms,
+  rooms = [],
   showAddRoomForm,
-  // roomForm and handleRoomInput are kept for compatibility but Add Room uses local state now
   roomForm,
   handleRoomInput,
   handleAddRoomFor,
@@ -26,18 +52,59 @@ function RoomsTable({
     monthlyRent: '',
     capacity: '',
     amenities: '',
-    paymentSchedule: '1st',
   });
 
-  // LOCAL add-room form state (fixes problems when shared parent state wasn't updated)
   const [localAddRoom, setLocalAddRoom] = useState({
     roomNumber: '',
     type: '',
     monthlyRent: '',
     capacity: '',
     amenities: '',
-    paymentSchedule: '1st',
   });
+
+  // Tenant editing state
+  const [editingTenantId, setEditingTenantId] = useState(null);
+  const [tenantEditForm, setTenantEditForm] = useState({
+    move_in: '',
+    paymentfrequency: '',
+  });
+
+  // Start editing a tenant (move_in and paymentfrequency)
+  const startEditTenant = (tenant) => {
+    setEditingTenantId(tenant.id);
+    setTenantEditForm({
+      move_in: tenant.move_in || '',
+      paymentfrequency: tenant.paymentfrequency || '',
+    });
+  };
+
+  // Handle tenant edit form change
+  const onTenantEditChange = (e) => {
+    const { name, value } = e.target;
+    setTenantEditForm((s) => ({ ...s, [name]: value }));
+  };
+
+  // Save tenant edit and update in database with confirmation
+  const saveTenantEdit = async (roomId, tenantId) => {
+    if (!window.confirm('Save changes to tenant details?')) return;
+    try {
+      // Call backend API to update tenant move_in and paymentfrequency
+      await fetch(`/api/properties/${prop.id}/rooms/${roomId}/tenants/${tenantId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          move_in: tenantEditForm.move_in,
+          paymentfrequency: tenantEditForm.paymentfrequency,
+        }),
+      });
+      setEditingTenantId(null);
+      // Optionally refresh data here if needed
+    } catch (err) {
+      alert('Failed to save tenant details.');
+    }
+  };
 
   const startEdit = (r) => {
     setEditingRoomId(r.id);
@@ -47,7 +114,6 @@ function RoomsTable({
       monthlyRent: r.monthlyRent || '',
       capacity: r.capacity || '',
       amenities: r.amenities || '',
-      paymentSchedule: r.paymentSchedule || '1st',
     });
   };
 
@@ -73,20 +139,16 @@ function RoomsTable({
 
   const submitLocalAdd = async (e) => {
     e.preventDefault();
-    // call parent with (propertyId, data)
     await handleAddRoomFor(prop.id, {
       roomNumber: localAddRoom.roomNumber,
       type: localAddRoom.type,
       monthlyRent: localAddRoom.monthlyRent,
       capacity: localAddRoom.capacity,
       amenities: localAddRoom.amenities,
-      paymentSchedule: localAddRoom.paymentSchedule,
     });
-    // clear local form
-    setLocalAddRoom({ roomNumber: '', type: '', monthlyRent: '', capacity: '', amenities: '', paymentSchedule: '1st' });
+    setLocalAddRoom({ roomNumber: '', type: '', monthlyRent: '', capacity: '', amenities: '' });
   };
 
-  // NEW: confirm before removing a tenant
   const confirmRemoveTenant = (roomId, tenantId, tenantName) => {
     const label = tenantName ? `"${tenantName}"` : 'this tenant';
     const ok = window.confirm(`Remove ${label} from room ${roomId}? This action cannot be undone.`);
@@ -105,7 +167,7 @@ function RoomsTable({
             <th>Monthly Rent</th>
             <th>Capacity</th>
             <th>Amenities</th>
-            <th>Schedule</th>
+            <th>Payment Frequency</th>
             <th>Tenants</th>
             <th>Actions</th>
           </tr>
@@ -124,26 +186,79 @@ function RoomsTable({
                   <td>${parseFloat(r.monthlyRent || 0).toFixed(2)}</td>
                   <td>{r.capacity || '-'}</td>
                   <td>{r.amenities || '-'}</td>
-                  <td>{r.paymentSchedule || '1st'}</td>
+                  <td>
+                    {(r.tenants && r.tenants.length > 0)
+                      ? r.tenants.map((tenant, idx) =>
+                          <div key={tenant.id || idx}>
+                            {tenant.paymentfrequency
+                              ? <>{getOrdinalSuperscript(tenant.paymentfrequency)} of month</>
+                              : '-'}
+                          </div>
+                        )
+                      : '-'
+                    }
+                  </td>
                   <td>
                     <div className="tenants-list">
                       {(r.tenants && r.tenants.length > 0) ? (
                         <ul>
                           {r.tenants.map((tenant) => (
                             <li key={tenant.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span>
-                                {tenant.firstName} {tenant.lastName}
-                                <span className="payment-schedule"> ({tenant.paymentSchedule || r.paymentSchedule || '1st'})</span>
-                              </span>
-                              <button
-                                className="remove-tenant-btn"
-                                onClick={() => confirmRemoveTenant(r.id, tenant.id, `${tenant.firstName} ${tenant.lastName}`)}
-                                type="button"
-                                aria-label={`Remove tenant ${tenant.firstName} ${tenant.lastName}`}
-                                style={{ marginLeft: 8 }}
-                              >
-                                ✕
-                              </button>
+                              {editingTenantId === tenant.id ? (
+                                <form
+                                  style={{ display: 'flex', gap: 8, alignItems: 'center' }}
+                                  onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    await saveTenantEdit(r.id, tenant.id);
+                                  }}
+                                >
+                                  <input
+                                    name="move_in"
+                                    type="date"
+                                    value={tenantEditForm.move_in}
+                                    onChange={onTenantEditChange}
+                                    style={{ width: 120 }}
+                                    required
+                                  />
+                                  <input
+                                    name="paymentfrequency"
+                                    type="number"
+                                    min="1"
+                                    max="31"
+                                    value={tenantEditForm.paymentfrequency}
+                                    onChange={onTenantEditChange}
+                                    placeholder="Day"
+                                    style={{ width: 60 }}
+                                    required
+                                  />
+                                  <button type="submit" className="submit-btn">Save</button>
+                                  <button type="button" className="cancel-btn" onClick={() => setEditingTenantId(null)}>Cancel</button>
+                                </form>
+                              ) : (
+                                <>
+                                  <span>
+                                    {tenant.firstName} {tenant.lastName}
+                                  </span>
+                                  <button
+                                    className="remove-tenant-btn"
+                                    onClick={() => confirmRemoveTenant(r.id, tenant.id, `${tenant.firstName} ${tenant.lastName}`)}
+                                    type="button"
+                                    aria-label={`Remove tenant ${tenant.firstName} ${tenant.lastName}`}
+                                    style={{ marginLeft: 8 }}
+                                  >
+                                    ✕
+                                  </button>
+                                  <button
+                                    className="edit-tenant-btn"
+                                    onClick={() => startEditTenant(tenant)}
+                                    type="button"
+                                    aria-label={`Edit tenant ${tenant.firstName} ${tenant.lastName}`}
+                                    style={{ marginLeft: 8 }}
+                                  >
+                                    Edit
+                                  </button>
+                                </>
+                              )}
                             </li>
                           ))}
                         </ul>
@@ -177,10 +292,6 @@ function RoomsTable({
                         <input name="monthlyRent" type="number" value={editForm.monthlyRent} onChange={onEditChange} required />
                         <input name="capacity" type="number" value={editForm.capacity} onChange={onEditChange} />
                         <input name="amenities" value={editForm.amenities} onChange={onEditChange} />
-                        <select name="paymentSchedule" value={editForm.paymentSchedule} onChange={onEditChange} required>
-                          <option value="1st">1st</option>
-                          <option value="15th">15th</option>
-                        </select>
                         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                           <button type="submit" className="submit-btn">Save</button>
                           <button type="button" className="cancel-btn" onClick={() => setEditingRoomId(null)}>Cancel</button>
@@ -254,15 +365,6 @@ function RoomsTable({
             value={localAddRoom.amenities}
             onChange={onLocalAddChange}
           />
-          <select
-            name="paymentSchedule"
-            value={localAddRoom.paymentSchedule}
-            onChange={onLocalAddChange}
-            required
-          >
-            <option value="1st">1st of Month</option>
-            <option value="15th">15th of Month</option>
-          </select>
           <button type="submit" className="submit-btn">Add Room</button>
         </form>
       )}

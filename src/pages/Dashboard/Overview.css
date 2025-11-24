@@ -251,6 +251,7 @@
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
 }
 
+
 /* Responsiveness */
 @media (max-width: 880px){
   .property-details{ flex-direction:column; }
@@ -258,6 +259,7 @@
   .rooms-table{ width:100%; }
   .property-hex-grid{ justify-content:center; }
 }
+
 
 /* Focus outlines */
 .property-card:focus, .btn:focus, .action-link:focus{

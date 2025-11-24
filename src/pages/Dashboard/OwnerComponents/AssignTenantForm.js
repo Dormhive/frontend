@@ -8,6 +8,7 @@ function AssignTenantForm({
   handleAssignTenant,
 }) {
   const current = tenantFormByRoom?.[roomId] || {};
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <form
@@ -26,15 +27,14 @@ function AssignTenantForm({
           style={{ flex: 1 }}
         />
 
-        <select
-          name="paymentSchedule"
-          value={current.paymentSchedule || '1st'}
+        <input
+          type="date"
+          name="move_in"
+          value={current.move_in || today}
           onChange={(e) => handleTenantInputForRoom(roomId, e)}
+          required
           style={{ width: 150 }}
-        >
-          <option value="1st">1st of Month</option>
-          <option value="15th">15th of Month</option>
-        </select>
+        />
 
         <button type="submit" className="submit-btn">Assign Tenant</button>
       </div>

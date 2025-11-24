@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import RoomsTable from './RoomsTable';
 
 function PropertyDetails({
@@ -25,23 +25,33 @@ function PropertyDetails({
   handleUpdateRoom = () => {},
   handleDeleteRoom = () => {},
 }) {
-  if (!selectedPropertyId) return null;
+  // Always call hooks at the top level
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    propertyName: '',
+    address: '',
+    description: '',
+  });
 
   // use loose equality to tolerate string/number mismatch from parent
   const prop = properties.find((p) => p.id == selectedPropertyId);
+
+  useEffect(() => {
+    if (prop) {
+      setEditForm({
+        propertyName: prop.propertyName || '',
+        address: prop.address || '',
+        description: prop.description || '',
+      });
+    }
+  }, [prop]);
+
+  if (!selectedPropertyId) return null;
   if (!prop) return null;
 
   const isExpanded = Boolean(expanded?.[prop.id]);
   const isAddingRoom = Boolean(showAddRoomForm?.[prop.id]);
   const roomsForProp = rooms?.[prop.id] || [];
-
-  // local edit state for property
-  const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({
-    propertyName: prop.propertyName || '',
-    address: prop.address || '',
-    description: prop.description || '',
-  });
 
   const onEditChange = (e) => {
     const { name, value } = e.target;
@@ -56,6 +66,13 @@ function PropertyDetails({
 
   const deleteProperty = async () => {
     await handleDeleteProperty(prop.id);
+  };
+
+  // Confirm before deleting a room
+  const handleDeleteRoomWithConfirm = async (propertyId, roomId) => {
+    const ok = window.confirm('Are you sure you want to delete this room? This action cannot be undone.');
+    if (!ok) return;
+    await handleDeleteRoom(propertyId, roomId);
   };
 
   return (
@@ -79,7 +96,7 @@ function PropertyDetails({
               <button className="submit-btn" onClick={() => setSelectedPropertyId(null)}>
                 Close
               </button>
-              <button className="cancel-btn" onClick={() => { setEditing(true); setEditForm({ propertyName: prop.propertyName, address: prop.address, description: prop.description || '' }); }}>
+              <button className="cancel-btn" onClick={() => { setEditing(true); }}>
                 Edit
               </button>
               <button className="cancel-btn" onClick={deleteProperty}>
@@ -116,7 +133,8 @@ function PropertyDetails({
           handleTenantInputForRoom={handleTenantInputForRoom}
           handleRemoveTenant={handleRemoveTenant}
           handleUpdateRoom={handleUpdateRoom}
-          handleDeleteRoom={handleDeleteRoom}
+          // Use the confirm wrapper for room deletion
+          handleDeleteRoom={handleDeleteRoomWithConfirm}
         />
       )}
     </div>
