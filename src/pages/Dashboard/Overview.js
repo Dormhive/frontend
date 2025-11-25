@@ -4,6 +4,9 @@ import SummarySection from './OwnerComponents/SummarySection';
 import './Overview.css';
 import './Dashboard.css';
 
+// Import the logo image
+import hiveLogo from './images/hive.png';
+
 const API_URL = 'http://localhost:3001/api';
 
 export default function Overview({ onOpenConcerns = null }) {
@@ -72,9 +75,17 @@ export default function Overview({ onOpenConcerns = null }) {
 
   return (
     <div className="dashboard-container">
-      <div style={{ marginBottom: 8 }}>
-        <h2 style={{ margin: 0 }}>Overview</h2>
-        <p style={{ margin: 0 }}>Quick metrics for your portfolio</p>
+      {/* Header with logo and text */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+        <img
+          src={hiveLogo}
+          alt="Hive Logo"
+          style={{ width: 170, marginRight: 10 }}
+        />
+        <div>
+          <h2 style={{ margin: 0 }}>Overview</h2>
+          <p style={{ margin: 0 }}>Your Hive Snapshot</p>
+        </div>
       </div>
 
       <SummarySection
