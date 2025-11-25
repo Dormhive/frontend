@@ -1,170 +1,102 @@
 import React, { useEffect, useState } from 'react';
-import '../TenantDashboard.css';        // corrected relative path
-import './tenantprofile.css';          // local styles for this component
+import { useNavigate } from 'react-router-dom';
+
+const API_URL = 'http://localhost:3001/api';
+
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
 
 export default function TenantProfile() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [profile, setProfile] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    address: '',
-    emergencyContact: '',
-    profile_picture: null,
-  });
+  const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    let mounted = true;
-    async function fetchProfile() {
+    const fetchProfile = async () => {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      setError(null);
       try {
-        const res = await fetch('/api/tenants/profile', {
-          headers: { Authorization: token ? `Bearer ${token}` : '' },
-        });
-        if (!res.ok) {
-          console.warn('/api/tenants/profile GET failed', res.status);
-          if (mounted) setLoading(false);
+        const token = localStorage.getItem('token');
+        console.log('tenantprofile - token present:', !!token, token ? `${token.slice(0, 10)}...` : null);
+        const decoded = token ? parseJwt(token) : null;
+        console.log('tenantprofile - decoded token payload:', decoded);
+
+        if (!token) {
+          console.warn('tenantprofile - no token found, redirecting to login');
+          navigate('/', { replace: true });
           return;
         }
-        const data = await res.json();
-        if (!mounted) return;
-        setProfile({
-          fullName: data.fullName || '',
-          email: data.email || '',
-          phone: data.phone || '',
-          address: data.address || '',
-          emergencyContact: data.emergencyContact || '',
-          profile_picture: data.profile_picture || null,
-        });
-        setPreviewUrl(data.profile_picture ? `/uploads/${data.profile_picture}` : null);
-      } catch (err) {
-        console.error('fetch profile error', err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-    fetchProfile();
-    return () => { mounted = false; };
-  }, []);
 
-  function handleFile(e) {
-    const f = e.target.files?.[0] || null;
-    if (f) {
-      setProfile((p) => ({ ...p, profile_picture: f }));
-      setPreviewUrl(URL.createObjectURL(f));
-    }
-  }
+        const headers = {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json'
+        };
+        console.log('tenantprofile - Request -> GET', `${API_URL}/tenants/me/profile`, 'Headers:', headers);
 
-  async function save(e) {
-    e?.preventDefault();
-    setSaving(true);
-    setMessage('');
-    const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/tenants/me/profile`, { headers });
+        console.log('tenantprofile - response status:', res.status);
 
-    try {
-      const opts = { method: 'PUT', headers: { Authorization: token ? `Bearer ${token}` : '' } };
-
-      if (profile.profile_picture instanceof File) {
-        const fd = new FormData();
-        fd.append('fullName', profile.fullName);
-        fd.append('email', profile.email);
-        fd.append('phone', profile.phone);
-        fd.append('address', profile.address);
-        fd.append('emergencyContact', profile.emergencyContact);
-        fd.append('profile_picture', profile.profile_picture);
-        opts.body = fd;
-      } else {
-        opts.headers['Content-Type'] = 'application/json';
-        opts.body = JSON.stringify({
-          fullName: profile.fullName,
-          email: profile.email,
-          phone: profile.phone,
-          address: profile.address,
-          emergencyContact: profile.emergencyContact,
-        });
-      }
-
-      const res = await fetch('/api/tenants/profile', opts);
-      const body = await res.json();
-
-      if (!res.ok) {
-        setMessage(body?.message || 'Failed to save profile');
-      } else {
-        setMessage('Profile saved');
-        const pic = body?.profile?.profile_picture || body?.profile_picture;
-        if (pic) {
-          setPreviewUrl(`/uploads/${pic}`);
-          setProfile((p) => ({ ...p, profile_picture: pic }));
+        let data = null;
+        try {
+          data = await res.json();
+          console.log('tenantprofile - response body (json):', data);
+        } catch (parseErr) {
+          const raw = await res.text().catch(() => null);
+          console.log('tenantprofile - response body (text):', raw);
         }
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            console.warn('tenantprofile - unauthorized (401). Clearing token and redirecting to login.');
+            localStorage.removeItem('token');
+            navigate('/', { replace: true });
+            throw new Error('Unauthorized - please sign in again');
+          }
+          const msg = data?.error || data?.message || `HTTP ${res.status}`;
+          throw new Error(msg);
+        }
+
+        // adapted to camelCase fields returned by backend
+        setUser(data?.user || null);
+      } catch (err) {
+        setError(String(err.message || err));
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('save profile error', err);
-      setMessage('Error saving profile');
-    } finally {
-      setSaving(false);
-    }
-  }
+    };
 
-  if (loading) return <div className="card tenant-profile">Loading profile…</div>;
+    fetchProfile();
+  }, [navigate]);
 
+  if (loading) return <div className="tenant-profile">Loading profile…</div>;
+  if (error) return <div className="tenant-profile error">Error: {error}</div>;
+  if (!user) return <div className="tenant-profile">No profile data available.</div>;
+
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || '—';
   return (
-    <div className="card tenant-profile">
-      <div className="card-head">
-        <div>
-          <div className="card-title">My Profile</div>
-          <div className="card-small">Manage your tenant profile</div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '.85rem', color: '#666' }}>Status</div>
-          <div style={{ fontWeight: 700 }}>{profile.email ? 'Active' : 'Incomplete'}</div>
-        </div>
-      </div>
-
-      <form onSubmit={save} style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 16, marginTop: 12 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
-          <div className="profile-avatar">
-            {previewUrl ? <img src={previewUrl} alt="avatar" /> : <div className="avatar-placeholder">{(profile.fullName || 'T')[0].toUpperCase()}</div>}
-          </div>
-          <input type="file" accept="image/*" onChange={handleFile} />
-        </div>
-
-        <div style={{ display: 'grid', gap: 8 }}>
-          <label>
-            <div className="card-small">Full name</div>
-            <input className="input-field" value={profile.fullName} onChange={(e) => setProfile((p) => ({ ...p, fullName: e.target.value }))} />
-          </label>
-
-          <label>
-            <div className="card-small">Email</div>
-            <input className="input-field" value={profile.email} onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))} />
-          </label>
-
-          <label>
-            <div className="card-small">Phone</div>
-            <input className="input-field" value={profile.phone} onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))} />
-          </label>
-
-          <label>
-            <div className="card-small">Address</div>
-            <input className="input-field" value={profile.address} onChange={(e) => setProfile((p) => ({ ...p, address: e.target.value }))} />
-          </label>
-
-          <label>
-            <div className="card-small">Emergency contact</div>
-            <input className="input-field" value={profile.emergencyContact} onChange={(e) => setProfile((p) => ({ ...p, emergencyContact: e.target.value }))} />
-          </label>
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-            <button type="submit" className="submit-btn" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
-            <button type="button" className="cancel-btn" onClick={() => setMessage('')}>Cancel</button>
-            {message && <div style={{ marginLeft: 10, color: '#333' }}>{message}</div>}
-          </div>
-        </div>
-      </form>
+    <div className="tenant-profile">
+      <h2>Profile</h2>
+      <div className="profile-row"><strong>ID:</strong> {user.id}</div>
+      <div className="profile-row"><strong>Name:</strong> {fullName}</div>
+      <div className="profile-row"><strong>Email:</strong> {user.email || '—'}</div>
+      <div className="profile-row"><strong>Phone:</strong> {user.phone || '—'}</div>
+      <div className="profile-row"><strong>Role:</strong> {user.role || '—'}</div>
+      <div className="profile-row"><strong>Created:</strong> {user.createdAt ? new Date(user.createdAt).toLocaleString() : '—'}</div>
     </div>
   );
 }

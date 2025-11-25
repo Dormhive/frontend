@@ -13,7 +13,7 @@ import OverviewPage from './TenantPages/tenantOverview';
 import Rent from './TenantPages/Rent';
 import InvoicePage from './TenantPages/Invoice';
 import SubmitTicketPage from './TenantPages/Tickets';
-import TenantProfile from './tenantprofile.js/tenantprofile'; // <- new import
+import TenantProfile from './tenantprofile/tenantprofile'; // <- new import
 
 const API_URL = 'http://localhost:3001/api';
 

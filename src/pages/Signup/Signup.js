@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './Signup.css';
@@ -44,7 +44,6 @@ function Signup() {
     return;
   }
 
-<<<<<<< HEAD
   try {
     const payload = { ...formData, role };
     const response = await axios.post(`${API_URL}/signup`, payload);
@@ -56,17 +55,6 @@ function Signup() {
     setError(err.response?.data?.message || 'An error occurred during signup.');
   }
 };
-=======
-    try {
-      const payload = { ...formData, role };
-      const response = await axios.post(`${API_URL}/signup`, payload);
-      setMessage(response.data.message);
-      setTimeout(() => navigate('/welcome'), 2000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred during signup.');
-    }
-  };
->>>>>>> d5cf48c (finance page commit)
 
   return (
     <div className="signup-page">
