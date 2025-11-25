@@ -13,6 +13,7 @@ import OverviewPage from './TenantPages/tenantOverview';
 import Rent from './TenantPages/Rent';
 import InvoicePage from './TenantPages/Invoice';
 import SubmitTicketPage from './TenantPages/Tickets';
+import TenantProfile from './tenantprofile.js/tenantprofile'; // <- new import
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -58,12 +59,14 @@ export default function TenantDashboard() {
   const [ticketError, setTicketError] = useState(null);
   const [ticketSuccess, setTicketSuccess] = useState(null);
 
- const tabs = [
-  { key: 'Overview', label: 'Overview', icon: icon1 },
-  { key: 'Rent', label: 'Rent', icon: icon2 },
-  { key: 'Utility', label: 'Utility', icon: icon4 },
-  { key: 'Submit Ticket', label: 'Submit Ticket', icon: icon1 },
-];
+  const tabs = [
+    { key: 'Overview', label: 'Overview', icon: icon1 },
+    { key: 'Rent', label: 'Rent', icon: icon2 },
+    { key: 'Utility', label: 'Utility', icon: icon4 },
+    { key: 'Invoice', label: 'Invoice', icon: icon3 },
+    { key: 'Submit Ticket', label: 'Submit Ticket', icon: icon1 },
+    { key: 'Profile', label: 'Profile', icon: icon3 }, // new Profile tab
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -179,7 +182,7 @@ export default function TenantDashboard() {
         tenantId: userId,
         ownerId: owner?.id || room.owner_id || null,
         propertyId: property?.id || null,
-        roomId: room.id,
+        roomId: room?.id,
         message: text,
       };
 
@@ -235,21 +238,24 @@ export default function TenantDashboard() {
     case 'Invoice':
       PageComponent = <InvoicePage />;
       break;
-      case 'Submit Ticket':
-          PageComponent = (
-            <SubmitTicketPage
-              tenantid={userId}
-              ownerid={owner?.id}
-              propertyid={property?.id}
-              roomid={room?.id}
-            />
-          );
+    case 'Submit Ticket':
+      PageComponent = (
+        <SubmitTicketPage
+          tenantid={userId}
+          ownerid={owner?.id}
+          propertyid={property?.id}
+          roomid={room?.id}
+        />
+      );
+      break;
+    case 'Profile':
+      PageComponent = <TenantProfile />; // new tenant profile page renderer
       break;
     default:
       PageComponent = null;
   }
 
-   return (
+  return (
     <div className="dashboard-container">
       <div className="dashboard-topbar">
         <div className="brand-left">
@@ -266,7 +272,7 @@ export default function TenantDashboard() {
               key={t.key}
               type="button"
               className={`tab${activeTab === t.key ? ' active' : ''}`}
-              onClick={() => setActiveTab(t.key)}
+              onClick={() => onTabClick(t.key)}
             >
               {t.icon && <img src={t.icon} alt="" className="tab-icon" />}
               <span className="tab-label">{t.label}</span>
