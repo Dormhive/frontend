@@ -1,256 +1,211 @@
 import React, { useEffect, useState } from 'react';
-import '../OwnerDashboard.css';
-import './ownerprofile.css';
+import { useNavigate } from 'react-router-dom';
+
+const API_URL = 'http://localhost:3001/api';
+
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
 
 export default function OwnerProfile() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
+
+  // edit state
   const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [previewUrl, setPreviewUrl] = useState(null);
-
-  const [profile, setProfile] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    emergencyContact: '',
-    profile_picture: null,
-  });
-
-  const [original, setOriginal] = useState(null);
+  const [saveError, setSaveError] = useState(null);
+  const [saveSuccess, setSaveSuccess] = useState(null);
 
   useEffect(() => {
-    let mounted = true;
-    async function fetchProfile() {
+    const fetchProfile = async () => {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      setError(null);
       try {
-        const res = await fetch('/api/owners/profile', {
-          headers: { Authorization: token ? `Bearer ${token}` : '' },
-        });
-        if (!res.ok) { if (mounted) setLoading(false); return; }
-        const data = await res.json();
-        if (!mounted) return;
+        const token = localStorage.getItem('token');
+        console.log('ownerprofile - token present:', !!token, token ? `${token.slice(0, 10)}...` : null);
+        const decoded = token ? parseJwt(token) : null;
+        console.log('ownerprofile - decoded token payload:', decoded);
 
-        let firstName = data.firstName || '';
-        let lastName = data.lastName || '';
-        if (!firstName && !lastName && data.fullName) {
-          const parts = String(data.fullName || '').trim().split(/\s+/);
-          firstName = parts.shift() || '';
-          lastName = parts.join(' ') || '';
+        if (!token) {
+          console.warn('ownerprofile - no token found, redirecting to login');
+          navigate('/', { replace: true });
+          return;
         }
 
-        const next = {
-          firstName,
-          lastName,
-          email: data.email || '',
-          phone: data.phone || '',
-          address: data.address || '',
-          emergencyContact: data.emergencyContact || '',
-          profile_picture: data.profile_picture || null,
+        const headers = {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json'
         };
+        console.log('ownerprofile - Request -> GET', `${API_URL}/owners/me/profile`, 'Headers:', headers);
 
-        setProfile(next);
-        setOriginal(next);
-        setPreviewUrl(data.profile_picture ? `/uploads/${data.profile_picture}` : null);
+        const res = await fetch(`${API_URL}/owners/me/profile`, { headers });
+        console.log('ownerprofile - response status:', res.status);
+
+        let data = null;
+        try {
+          data = await res.json();
+          console.log('ownerprofile - response body (json):', data);
+        } catch (parseErr) {
+          const raw = await res.text().catch(() => null);
+          console.log('ownerprofile - response body (text):', raw);
+        }
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            console.warn('ownerprofile - unauthorized (401). Clearing token and redirecting to login.');
+            localStorage.removeItem('token');
+            navigate('/', { replace: true });
+            throw new Error('Unauthorized - please sign in again');
+          }
+          const msg = data?.error || data?.message || `HTTP ${res.status}`;
+          throw new Error(msg);
+        }
+
+        setUser(data?.user || null);
       } catch (err) {
-        console.error('owner fetch error', err);
+        setError(String(err.message || err));
+        setUser(null);
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
-    }
+    };
+
     fetchProfile();
-    return () => { mounted = false; };
-  }, []);
+  }, [navigate]);
 
-  function handleFile(e) {
-    const f = e.target.files?.[0] || null;
-    if (f) {
-      setProfile((p) => ({ ...p, profile_picture: f }));
-      setPreviewUrl(URL.createObjectURL(f));
+  // prepare form when entering edit mode
+  useEffect(() => {
+    if (editing && user) {
+      setForm({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || ''
+      });
+      setSaveError(null);
+      setSaveSuccess(null);
     }
-  }
+  }, [editing, user]);
 
-  function startEdit() {
-    setMessage('');
-    setEditing(true);
-    if (original) setProfile(original);
-  }
-
-  function cancelEdit() {
-    setMessage('');
-    setEditing(false);
-    if (original) setProfile(original);
-    if (original?.profile_picture) setPreviewUrl(original.profile_picture ? `/uploads/${original.profile_picture}` : null);
-  }
-
-  async function save(e) {
-    e?.preventDefault();
+  async function handleSave(e) {
+    e.preventDefault();
     setSaving(true);
-    setMessage('');
-    const token = localStorage.getItem('token');
+    setSaveError(null);
+    setSaveSuccess(null);
     try {
-      const opts = { method: 'PUT', headers: { Authorization: token ? `Bearer ${token}` : '' } };
-      if (profile.profile_picture instanceof File) {
-        const fd = new FormData();
-        fd.append('firstName', profile.firstName);
-        fd.append('lastName', profile.lastName);
-        fd.append('email', profile.email);
-        fd.append('phone', profile.phone);
-        fd.append('address', profile.address);
-        fd.append('emergencyContact', profile.emergencyContact);
-        fd.append('profile_picture', profile.profile_picture);
-        opts.body = fd;
-      } else {
-        opts.headers['Content-Type'] = 'application/json';
-        opts.body = JSON.stringify({
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-          email: profile.email,
-          phone: profile.phone,
-          address: profile.address,
-          emergencyContact: profile.emergencyContact,
-        });
-      }
-      const res = await fetch('/api/owners/profile', opts);
-      const body = await res.json();
-      if (!res.ok) setMessage(body?.message || 'Failed to save profile');
-      else {
-        setMessage('Profile saved');
-        const pic = body?.profile?.profile_picture || body?.profile_picture;
-        if (pic) {
-          setPreviewUrl(`/uploads/${pic}`);
-          setProfile((p) => ({ ...p, profile_picture: pic }));
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Not authenticated');
+
+      const payload = {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        phone: form.phone
+      };
+
+      console.log('ownerprofile - Request -> PUT', `${API_URL}/owners/me/profile`, { payload, token: !!token });
+      const res = await fetch(`${API_URL}/owners/me/profile`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('ownerprofile - save response status:', res.status);
+      const data = await res.json().catch(() => null);
+      console.log('ownerprofile - save response body:', data);
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/', { replace: true });
+          throw new Error('Unauthorized');
         }
-        const updatedSnapshot = {
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-          email: profile.email,
-          phone: profile.phone,
-          address: profile.address,
-          emergencyContact: profile.emergencyContact,
-          profile_picture: (pic || profile.profile_picture) ?? null,
-        };
-        setOriginal(updatedSnapshot);
-        setProfile(updatedSnapshot);
-        setEditing(false);
+        throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
       }
+
+      setUser(data?.user || { ...user, ...payload });
+      setEditing(false);
+      setSaveSuccess('Profile saved');
     } catch (err) {
-      console.error('owner save error', err);
-      setMessage('Error saving profile');
+      setSaveError(String(err.message || err));
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading) return <div className="card owner-profile">Loading profile…</div>;
+  if (loading) return <div className="owner-profile">Loading profile…</div>;
+  if (error) return <div className="owner-profile error">Error: {error}</div>;
+  if (!user) return <div className="owner-profile">No profile data available.</div>;
 
-  const initials = (profile.firstName || 'O')[0]?.toUpperCase();
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || '—';
 
   return (
-    <div className="card owner-profile">
-      <div className="card-head">
-        <div>
-          <div className="card-title">Owner Profile</div>
-          <div className="card-small">View or edit your owner account</div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '.85rem', color: '#666' }}>Status</div>
-          <div style={{ fontWeight: 700 }}>{profile.email ? 'Active' : 'Incomplete'}</div>
-        </div>
-      </div>
+    <div className="owner-profile">
+      <h2>Profile</h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 16, marginTop: 12 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
-          <div className="profile-avatar">
-            {previewUrl ? <img src={previewUrl} alt="avatar" /> : <div className="avatar-placeholder">{initials}</div>}
+      {!editing && (
+        <>
+          <div className="profile-row"><strong>ID:</strong> {user.id}</div>
+          <div className="profile-row"><strong>Name:</strong> {fullName}</div>
+          <div className="profile-row"><strong>Email:</strong> {user.email || '—'}</div>
+          <div className="profile-row"><strong>Phone:</strong> {user.phone || '—'}</div>
+          <div style={{ marginTop: 12 }}>
+            <button onClick={() => setEditing(true)} style={{ marginRight: 8 }}>Edit</button>
           </div>
-          {editing ? <input type="file" accept="image/*" onChange={handleFile} /> : null}
-        </div>
+        </>
+      )}
 
-        <div style={{ display: 'grid', gap: 8 }}>
-          {!editing ? (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div>
-                  <div className="card-small">First name</div>
-                  <div style={{ padding: 8 }}>{profile.firstName || '—'}</div>
-                </div>
-                <div>
-                  <div className="card-small">Last name</div>
-                  <div style={{ padding: 8 }}>{profile.lastName || '—'}</div>
-                </div>
-              </div>
+      {editing && (
+        <form onSubmit={handleSave} style={{ maxWidth: 520 }}>
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'block', fontSize: 13 }}>First name</label>
+            <input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+          </div>
 
-              <div>
-                <div className="card-small">Email</div>
-                <div style={{ padding: 8 }}>{profile.email || '—'}</div>
-              </div>
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'block', fontSize: 13 }}>Last name</label>
+            <input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
+          </div>
 
-              <div>
-                <div className="card-small">Phone</div>
-                <div style={{ padding: 8 }}>{profile.phone || '—'}</div>
-              </div>
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'block', fontSize: 13 }}>Email</label>
+            <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          </div>
 
-              <div>
-                <div className="card-small">Address</div>
-                <div style={{ padding: 8 }}>{profile.address || '—'}</div>
-              </div>
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'block', fontSize: 13 }}>Phone</label>
+            <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          </div>
 
-              <div>
-                <div className="card-small">Emergency contact</div>
-                <div style={{ padding: 8 }}>{profile.emergencyContact || '—'}</div>
-              </div>
+          {saveError && <div style={{ color: 'red', marginBottom: 8 }}>{saveError}</div>}
+          {saveSuccess && <div style={{ color: 'green', marginBottom: 8 }}>{saveSuccess}</div>}
 
-              <div style={{ marginTop: 12 }}>
-                <button className="submit-btn" onClick={startEdit}>Edit profile</button>
-              </div>
-            </>
-          ) : (
-            <form onSubmit={save} style={{ display: 'grid', gap: 8 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <label>
-                  <div className="card-small">First name</div>
-                  <input className="input-field" value={profile.firstName} onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))} />
-                </label>
-
-                <label>
-                  <div className="card-small">Last name</div>
-                  <input className="input-field" value={profile.lastName} onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))} />
-                </label>
-              </div>
-
-              <label>
-                <div className="card-small">Email</div>
-                <input className="input-field" value={profile.email} onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))} />
-              </label>
-
-              <label>
-                <div className="card-small">Phone</div>
-                <input className="input-field" value={profile.phone} onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))} />
-              </label>
-
-              <label>
-                <div className="card-small">Address</div>
-                <input className="input-field" value={profile.address} onChange={(e) => setProfile((p) => ({ ...p, address: e.target.value }))} />
-              </label>
-
-              <label>
-                <div className="card-small">Emergency contact</div>
-                <input className="input-field" value={profile.emergencyContact} onChange={(e) => setProfile((p) => ({ ...p, emergencyContact: e.target.value }))} />
-              </label>
-
-              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                <button type="submit" className="submit-btn" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
-                <button type="button" className="cancel-btn" onClick={cancelEdit} disabled={saving}>Cancel</button>
-                {message && <div className="message">{message}</div>}
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+            <button type="button" onClick={() => setEditing(false)} disabled={saving}>Cancel</button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

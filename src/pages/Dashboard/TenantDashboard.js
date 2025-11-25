@@ -6,14 +6,14 @@ import icon1 from '../../assets/top-icons/td1.png';
 import icon2 from '../../assets/top-icons/td2.png';
 import icon3 from '../../assets/top-icons/td3.png';
 import icon4 from '../../assets/top-icons/td4.png';
-import logoImg from './images/Logo.png'; // <-- Import the DormHive logo
+import logoImg from './images/Logo.png'; 
 
 // Page components
 import OverviewPage from './TenantPages/tenantOverview';
 import Rent from './TenantPages/Rent';
 import InvoicePage from './TenantPages/Invoice';
 import SubmitTicketPage from './TenantPages/Tickets';
-import TenantProfile from './tenantprofile/tenantprofile'; // <- new import
+import TenantProfile from './tenantprofile/tenantprofile'; 
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -65,7 +65,7 @@ export default function TenantDashboard() {
     { key: 'Utility', label: 'Utility', icon: icon4 },
     { key: 'Invoice', label: 'Invoice', icon: icon3 },
     { key: 'Submit Ticket', label: 'Submit Ticket', icon: icon1 },
-    { key: 'Profile', label: 'Profile', icon: icon3 }, // new Profile tab
+    { key: 'Profile', label: 'Profile', icon: icon3 }, 
   ];
 
   useEffect(() => {
